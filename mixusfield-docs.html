@@ -1,0 +1,1371 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Mixusfield Docs — v2.0.0</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=JetBrains+Mono:wght@400;500;600&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet"/>
+<style>
+:root {
+  --bg:        #08080f;
+  --surface:   #0f0f1a;
+  --surface2:  #14142a;
+  --border:    #1e1e38;
+  --accent:    #7c6bf0;
+  --accent2:   #4fc3f7;
+  --success:   #4ecdc4;
+  --warn:      #ffd166;
+  --error:     #ef476f;
+  --text:      #e8e8f0;
+  --textdim:   #8888a8;
+  --textmuted: #44445a;
+  --font-head: 'Syne', sans-serif;
+  --font-body: 'DM Sans', sans-serif;
+  --font-code: 'JetBrains Mono', monospace;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html { scroll-behavior: smooth; }
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-body);
+  font-size: 15px;
+  line-height: 1.7;
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* ── SCROLLBAR ── */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: var(--bg); }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 99px; }
+::-webkit-scrollbar-thumb:hover { background: var(--accent); }
+
+/* ── NOISE OVERLAY ── */
+body::before {
+  content: '';
+  position: fixed; inset: 0; z-index: 0; pointer-events: none;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  opacity: 0.03;
+}
+
+/* ── GLOW ORBS ── */
+.orb {
+  position: fixed; border-radius: 50%; filter: blur(100px); pointer-events: none; z-index: 0;
+}
+.orb-1 { width: 600px; height: 600px; background: rgba(124,107,240,0.12); top: -200px; left: -150px; }
+.orb-2 { width: 500px; height: 500px; background: rgba(79,195,247,0.07); bottom: -100px; right: -100px; }
+
+/* ── LAYOUT ── */
+#app { position: relative; z-index: 1; display: flex; min-height: 100vh; }
+
+/* ── SIDEBAR ── */
+aside {
+  width: 260px; flex-shrink: 0;
+  background: rgba(15,15,26,0.8);
+  border-right: 1px solid var(--border);
+  backdrop-filter: blur(12px);
+  position: fixed; top: 0; left: 0; bottom: 0;
+  overflow-y: auto; overflow-x: hidden;
+  display: flex; flex-direction: column;
+  z-index: 100;
+  transition: transform 0.3s ease;
+}
+
+.sidebar-logo {
+  padding: 28px 24px 20px;
+  border-bottom: 1px solid var(--border);
+}
+.logo-badge {
+  display: inline-flex; align-items: center; gap: 10px;
+  margin-bottom: 6px;
+}
+.logo-icon {
+  width: 34px; height: 34px; border-radius: 9px;
+  background: linear-gradient(135deg, var(--accent), #a78bfa);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 16px;
+}
+.logo-title {
+  font-family: var(--font-head);
+  font-size: 18px; font-weight: 800;
+  letter-spacing: -0.3px;
+}
+.logo-sub {
+  font-size: 11px; color: var(--textmuted);
+  font-family: var(--font-code);
+  letter-spacing: 0.5px;
+}
+
+nav { padding: 16px 0; flex: 1; }
+.nav-section {
+  padding: 6px 24px 4px;
+  font-size: 10px; font-weight: 600;
+  letter-spacing: 1.4px; text-transform: uppercase;
+  color: var(--textmuted);
+  font-family: var(--font-head);
+  margin-top: 10px;
+}
+nav a {
+  display: flex; align-items: center; gap: 9px;
+  padding: 7px 24px;
+  color: var(--textdim);
+  text-decoration: none;
+  font-size: 13.5px;
+  border-left: 2px solid transparent;
+  transition: all 0.2s;
+  position: relative;
+}
+nav a .nav-icon { font-size: 14px; opacity: 0.8; width: 16px; text-align: center; }
+nav a:hover { color: var(--text); background: rgba(124,107,240,0.06); }
+nav a.active {
+  color: var(--accent); border-left-color: var(--accent);
+  background: rgba(124,107,240,0.1);
+  font-weight: 500;
+}
+.badge {
+  margin-left: auto; background: rgba(124,107,240,0.18);
+  color: var(--accent); font-size: 10px;
+  padding: 1px 7px; border-radius: 99px;
+  font-family: var(--font-code); font-weight: 600;
+}
+.badge.new { background: rgba(78,205,196,0.18); color: var(--success); }
+
+/* ── MAIN CONTENT ── */
+main {
+  margin-left: 260px;
+  flex: 1; min-width: 0;
+  padding: 0 48px 80px;
+  max-width: 920px;
+}
+
+/* ── TOPBAR ── */
+.topbar {
+  position: sticky; top: 0; z-index: 50;
+  background: rgba(8,8,15,0.85); backdrop-filter: blur(16px);
+  border-bottom: 1px solid var(--border);
+  padding: 14px 0; margin: 0 -48px;
+  padding-left: 48px; padding-right: 48px;
+  display: flex; align-items: center; gap: 16px;
+  margin-bottom: 48px;
+}
+.topbar-search {
+  flex: 1; max-width: 340px;
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 8px; display: flex; align-items: center; gap: 8px;
+  padding: 8px 12px; color: var(--textmuted); font-size: 13px;
+  cursor: text;
+}
+.topbar-search input {
+  background: none; border: none; outline: none;
+  color: var(--text); font-size: 13px; font-family: var(--font-body);
+  width: 100%;
+}
+.topbar-search input::placeholder { color: var(--textmuted); }
+.topbar-right { margin-left: auto; display: flex; align-items: center; gap: 10px; }
+.pill {
+  display: inline-flex; align-items: center; gap: 6px;
+  background: rgba(124,107,240,0.12);
+  color: var(--accent); border: 1px solid rgba(124,107,240,0.25);
+  border-radius: 99px; padding: 4px 12px; font-size: 12px;
+  font-family: var(--font-code);
+}
+.dot { width: 6px; height: 6px; border-radius: 50%; background: var(--success); box-shadow: 0 0 6px var(--success); }
+.hamburger { display: none; cursor: pointer; font-size: 20px; color: var(--textdim); }
+
+/* ── HERO ── */
+.hero { padding: 56px 0 48px; border-bottom: 1px solid var(--border); margin-bottom: 56px; }
+.hero-eyebrow {
+  display: inline-flex; align-items: center; gap: 8px;
+  background: rgba(124,107,240,0.1); border: 1px solid rgba(124,107,240,0.22);
+  border-radius: 99px; padding: 4px 14px;
+  font-size: 11px; color: var(--accent); font-family: var(--font-code);
+  margin-bottom: 22px; letter-spacing: 0.4px;
+}
+.hero h1 {
+  font-family: var(--font-head); font-size: clamp(36px, 5vw, 52px);
+  font-weight: 800; line-height: 1.1; letter-spacing: -1.5px;
+  margin-bottom: 18px;
+}
+.hero h1 span {
+  background: linear-gradient(120deg, var(--accent) 0%, var(--accent2) 100%);
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+.hero p { color: var(--textdim); max-width: 560px; font-size: 16px; line-height: 1.8; margin-bottom: 30px; }
+.hero-actions { display: flex; gap: 12px; flex-wrap: wrap; }
+.btn {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 10px 22px; border-radius: 9px; font-size: 13.5px; font-weight: 500;
+  text-decoration: none; cursor: pointer; border: none; transition: all 0.2s;
+  font-family: var(--font-body);
+}
+.btn-primary {
+  background: var(--accent); color: #fff;
+  box-shadow: 0 0 24px rgba(124,107,240,0.35);
+}
+.btn-primary:hover { background: #6a5adf; transform: translateY(-1px); box-shadow: 0 0 32px rgba(124,107,240,0.5); }
+.btn-ghost {
+  background: transparent; color: var(--textdim);
+  border: 1px solid var(--border);
+}
+.btn-ghost:hover { border-color: var(--accent); color: var(--accent); background: rgba(124,107,240,0.06); }
+
+/* ── FEATURE GRID ── */
+.feature-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin: 32px 0 48px; }
+.feature-card {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 12px; padding: 18px 20px;
+  transition: border-color 0.2s, transform 0.2s;
+}
+.feature-card:hover { border-color: rgba(124,107,240,0.4); transform: translateY(-2px); }
+.feature-icon { font-size: 20px; margin-bottom: 10px; }
+.feature-card h4 { font-family: var(--font-head); font-size: 13px; font-weight: 700; margin-bottom: 5px; }
+.feature-card p { font-size: 12px; color: var(--textdim); line-height: 1.6; }
+
+/* ── SECTIONS ── */
+.section { margin-bottom: 72px; scroll-margin-top: 80px; }
+.section-header { margin-bottom: 28px; }
+.section-eyebrow {
+  font-size: 11px; color: var(--accent); font-family: var(--font-code);
+  letter-spacing: 1px; text-transform: uppercase; margin-bottom: 8px;
+}
+.section h2 {
+  font-family: var(--font-head); font-size: 26px; font-weight: 800;
+  letter-spacing: -0.5px; margin-bottom: 10px;
+}
+.section > p, .section-header > p { color: var(--textdim); max-width: 600px; line-height: 1.8; }
+
+/* ── CODE BLOCKS ── */
+.code-wrap {
+  position: relative; margin: 20px 0;
+  border-radius: 12px; overflow: hidden;
+  border: 1px solid var(--border);
+}
+.code-header {
+  background: var(--surface2); padding: 10px 16px;
+  display: flex; align-items: center; gap: 10px;
+  border-bottom: 1px solid var(--border);
+}
+.code-dots { display: flex; gap: 5px; }
+.code-dot { width: 10px; height: 10px; border-radius: 50%; }
+.code-dot:nth-child(1) { background: #ff5f57; }
+.code-dot:nth-child(2) { background: #ffbd2e; }
+.code-dot:nth-child(3) { background: #28c840; }
+.code-lang {
+  font-family: var(--font-code); font-size: 11px; color: var(--textmuted);
+  margin-left: 4px; letter-spacing: 0.5px;
+}
+.code-copy {
+  margin-left: auto; background: none; border: 1px solid var(--border);
+  color: var(--textdim); font-size: 11px; padding: 3px 10px; border-radius: 5px;
+  cursor: pointer; font-family: var(--font-code); transition: all 0.2s;
+}
+.code-copy:hover { border-color: var(--accent); color: var(--accent); }
+.code-copy.copied { border-color: var(--success); color: var(--success); }
+pre {
+  background: #0a0a15; padding: 20px;
+  overflow-x: auto; font-family: var(--font-code);
+  font-size: 13px; line-height: 1.7;
+  tab-size: 4;
+}
+pre code { display: block; }
+
+/* Syntax highlights */
+.kw   { color: #c792ea; }
+.fn   { color: #82aaff; }
+.str  { color: #c3e88d; }
+.num  { color: #f78c6c; }
+.cmt  { color: #546e7a; font-style: italic; }
+.prop { color: #ffcb6b; }
+.punc { color: #89ddff; }
+
+/* ── PARAM TABLES ── */
+.param-table {
+  width: 100%; border-collapse: collapse; margin: 20px 0;
+  font-size: 13.5px;
+}
+.param-table thead th {
+  text-align: left; padding: 10px 16px;
+  background: var(--surface2); color: var(--textdim);
+  font-size: 11px; font-weight: 600; letter-spacing: 0.8px;
+  text-transform: uppercase; font-family: var(--font-head);
+  border-bottom: 1px solid var(--border);
+}
+.param-table thead th:first-child { border-radius: 8px 0 0 0; }
+.param-table thead th:last-child  { border-radius: 0 8px 0 0; }
+.param-table tbody tr {
+  border-bottom: 1px solid rgba(30,30,56,0.6);
+  transition: background 0.15s;
+}
+.param-table tbody tr:hover { background: rgba(124,107,240,0.04); }
+.param-table td { padding: 11px 16px; }
+.param-table td:first-child { font-family: var(--font-code); color: var(--accent2); font-size: 12.5px; }
+.param-table td:nth-child(2) { font-family: var(--font-code); color: var(--warn); font-size: 12px; }
+.param-table td:last-child { color: var(--textdim); }
+.opt-badge {
+  font-size: 10px; background: rgba(255,209,102,0.12);
+  color: var(--warn); border: 1px solid rgba(255,209,102,0.2);
+  border-radius: 4px; padding: 1px 6px; margin-left: 6px;
+  font-family: var(--font-code); vertical-align: middle;
+}
+.req-badge {
+  font-size: 10px; background: rgba(239,71,111,0.12);
+  color: var(--error); border: 1px solid rgba(239,71,111,0.2);
+  border-radius: 4px; padding: 1px 6px; margin-left: 6px;
+  font-family: var(--font-code); vertical-align: middle;
+}
+
+/* ── COMPONENT CARDS ── */
+.comp-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin: 24px 0; }
+.comp-card {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 12px; padding: 20px;
+  position: relative; overflow: hidden;
+  transition: border-color 0.2s, transform 0.2s;
+}
+.comp-card::before {
+  content: ''; position: absolute; inset: 0;
+  background: linear-gradient(135deg, rgba(124,107,240,0.05) 0%, transparent 60%);
+  pointer-events: none;
+}
+.comp-card:hover { border-color: rgba(124,107,240,0.4); transform: translateY(-2px); }
+.comp-card h3 {
+  font-family: var(--font-head); font-size: 14px; font-weight: 700;
+  margin-bottom: 6px; display: flex; align-items: center; gap: 8px;
+}
+.comp-card h3 .tag {
+  font-size: 10px; font-family: var(--font-code); font-weight: 500;
+  background: rgba(124,107,240,0.15); color: var(--accent);
+  padding: 2px 7px; border-radius: 4px;
+}
+.comp-card p { color: var(--textdim); font-size: 12.5px; line-height: 1.6; }
+.comp-card .api-list {
+  margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--border);
+  font-family: var(--font-code); font-size: 11.5px; color: var(--textmuted);
+  display: flex; flex-direction: column; gap: 3px;
+}
+.comp-card .api-list span { color: var(--accent2); }
+
+/* ── CALLOUTS ── */
+.callout {
+  border-radius: 10px; padding: 16px 20px; margin: 20px 0;
+  display: flex; gap: 14px; align-items: flex-start;
+  font-size: 13.5px; line-height: 1.7;
+}
+.callout-icon { font-size: 18px; flex-shrink: 0; margin-top: 1px; }
+.callout-body strong { display: block; font-weight: 600; margin-bottom: 3px; font-size: 13px; }
+.callout.tip    { background: rgba(78,205,196,0.08); border: 1px solid rgba(78,205,196,0.2); }
+.callout.warn   { background: rgba(255,209,102,0.07); border: 1px solid rgba(255,209,102,0.2); }
+.callout.info   { background: rgba(110,170,255,0.07); border: 1px solid rgba(110,170,255,0.2); }
+.callout.danger { background: rgba(239,71,111,0.07); border: 1px solid rgba(239,71,111,0.2); }
+.callout.tip    .callout-icon { color: var(--success); }
+.callout.warn   .callout-icon { color: var(--warn); }
+.callout.info   .callout-icon { color: #6eaaff; }
+.callout.danger .callout-icon { color: var(--error); }
+
+/* ── THEME PALETTE ── */
+.theme-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin: 20px 0; }
+.theme-card {
+  border-radius: 10px; overflow: hidden; border: 1px solid var(--border);
+  cursor: pointer; transition: transform 0.2s, border-color 0.2s;
+}
+.theme-card:hover { transform: scale(1.03); border-color: var(--accent); }
+.theme-preview { height: 70px; position: relative; display: flex; align-items: center; justify-content: center; }
+.theme-preview .mini-win {
+  width: 80%; height: 52px; border-radius: 6px;
+  border: 1px solid rgba(255,255,255,0.08); overflow: hidden;
+  display: flex; flex-direction: column;
+}
+.mini-top { height: 14px; display: flex; align-items: center; padding: 0 6px; gap: 3px; }
+.mini-dot { width: 5px; height: 5px; border-radius: 50%; }
+.mini-body { flex: 1; display: flex; gap: 4px; padding: 4px; }
+.mini-sidebar { width: 22px; border-radius: 3px; }
+.mini-content { flex: 1; display: flex; flex-direction: column; gap: 3px; }
+.mini-line { height: 4px; border-radius: 2px; }
+.theme-name {
+  padding: 8px 12px;
+  font-family: var(--font-head); font-size: 12px; font-weight: 600;
+  border-top: 1px solid rgba(255,255,255,0.05);
+  display: flex; justify-content: space-between; align-items: center;
+}
+.theme-accent-dot { width: 10px; height: 10px; border-radius: 50%; }
+
+/* ── API REFERENCE ── */
+.api-block { margin: 24px 0; }
+.api-sig {
+  background: var(--surface2); border: 1px solid var(--border);
+  border-radius: 8px 8px 0 0; padding: 13px 18px;
+  font-family: var(--font-code); font-size: 13px;
+  border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; gap: 8px;
+  flex-wrap: wrap;
+}
+.api-method { color: var(--accent); font-weight: 600; }
+.api-returns {
+  margin-left: auto; font-size: 11px;
+  background: rgba(78,205,196,0.12); color: var(--success);
+  padding: 2px 9px; border-radius: 4px; border: 1px solid rgba(78,205,196,0.2);
+}
+.api-desc {
+  background: var(--surface); border: 1px solid var(--border);
+  border-top: none; border-radius: 0 0 8px 8px;
+  padding: 14px 18px; color: var(--textdim); font-size: 13.5px; line-height: 1.7;
+}
+
+/* ── INLINE CODE ── */
+code:not(pre code) {
+  font-family: var(--font-code); font-size: 12.5px;
+  background: rgba(124,107,240,0.12); color: var(--accent2);
+  padding: 1px 7px; border-radius: 5px; border: 1px solid rgba(124,107,240,0.15);
+}
+
+/* ── DIVIDER ── */
+.divider { border: none; border-top: 1px solid var(--border); margin: 48px 0; }
+
+/* ── NOTIFICATION PREVIEW ── */
+.notif-types { display: flex; flex-direction: column; gap: 10px; margin: 16px 0; }
+.notif-item {
+  display: flex; align-items: center; gap: 14px;
+  padding: 12px 16px; border-radius: 10px; border: 1px solid;
+  font-size: 13px;
+}
+.notif-item.success { background: rgba(78,205,196,0.07); border-color: rgba(78,205,196,0.2); }
+.notif-item.warn    { background: rgba(255,209,102,0.07); border-color: rgba(255,209,102,0.2); }
+.notif-item.error   { background: rgba(239,71,111,0.07); border-color: rgba(239,71,111,0.2); }
+.notif-item.info    { background: rgba(110,170,255,0.07); border-color: rgba(110,170,255,0.2); }
+.notif-title { font-weight: 600; font-size: 13px; }
+.notif-content { color: var(--textdim); font-size: 12px; }
+
+/* ── FOOTER ── */
+footer {
+  margin-left: 260px; padding: 24px 48px;
+  border-top: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: space-between;
+  font-size: 12px; color: var(--textmuted);
+  position: relative; z-index: 1;
+}
+footer a { color: var(--accent); text-decoration: none; }
+footer a:hover { text-decoration: underline; }
+
+/* ── RESPONSIVE ── */
+@media (max-width: 900px) {
+  aside { transform: translateX(-100%); }
+  aside.open { transform: translateX(0); }
+  main { margin-left: 0; padding: 0 20px 60px; }
+  .topbar { margin: 0 -20px; padding-left: 20px; padding-right: 20px; }
+  footer { margin-left: 0; padding: 20px; }
+  .feature-grid { grid-template-columns: 1fr 1fr; }
+  .comp-grid { grid-template-columns: 1fr; }
+  .theme-grid { grid-template-columns: repeat(2, 1fr); }
+  .hamburger { display: block; }
+}
+@media (max-width: 580px) {
+  .feature-grid { grid-template-columns: 1fr; }
+  .theme-grid { grid-template-columns: repeat(2, 1fr); }
+  pre { font-size: 11.5px; }
+}
+
+/* ── ANIMATIONS ── */
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(18px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.hero, .section { animation: fadeUp 0.5s ease both; }
+.section:nth-child(2) { animation-delay: 0.05s; }
+.section:nth-child(3) { animation-delay: 0.1s; }
+
+/* ── MOBILE OVERLAY ── */
+.overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 99; }
+.overlay.show { display: block; }
+</style>
+</head>
+<body>
+
+<div class="orb orb-1"></div>
+<div class="orb orb-2"></div>
+
+<div class="overlay" id="overlay" onclick="closeSidebar()"></div>
+
+<div id="app">
+<!-- ════════════════════════════ SIDEBAR ════════════════════════════ -->
+<aside id="sidebar">
+  <div class="sidebar-logo">
+    <div class="logo-badge">
+      <div class="logo-icon">✦</div>
+      <div class="logo-title">Mixusfield</div>
+    </div>
+    <div class="logo-sub">Documentation · v2.0.0</div>
+  </div>
+  <nav>
+    <div class="nav-section">Getting Started</div>
+    <a href="#overview" class="active"><span class="nav-icon">⊞</span> Overview</a>
+    <a href="#installation"><span class="nav-icon">↓</span> Installation</a>
+    <a href="#quickstart"><span class="nav-icon">▶</span> Quick Start</a>
+
+    <div class="nav-section">Core</div>
+    <a href="#window"><span class="nav-icon">▣</span> Window</a>
+    <a href="#tabs"><span class="nav-icon">◫</span> Tabs</a>
+    <a href="#themes"><span class="nav-icon">◑</span> Themes</a>
+
+    <div class="nav-section">Components</div>
+    <a href="#button"><span class="nav-icon">◉</span> Button</a>
+    <a href="#toggle"><span class="nav-icon">⏻</span> Toggle</a>
+    <a href="#slider"><span class="nav-icon">▬</span> Slider</a>
+    <a href="#dropdown"><span class="nav-icon">▾</span> Dropdown</a>
+    <a href="#textbox"><span class="nav-icon">✎</span> Textbox</a>
+    <a href="#keybind"><span class="nav-icon">⌨</span> Keybind</a>
+    <a href="#colorpicker"><span class="nav-icon">◐</span> ColorPicker</a>
+    <a href="#progressbar"><span class="nav-icon">▰</span> ProgressBar</a>
+    <a href="#radiogroup"><span class="nav-icon">◎</span> RadioGroup</a>
+    <a href="#accordion"><span class="nav-icon">⊟</span> Accordion</a>
+    <a href="#section-comp"><span class="nav-icon">—</span> Section / Divider</a>
+    <a href="#label"><span class="nav-icon">❝</span> Label / Paragraph</a>
+
+    <div class="nav-section">Systems</div>
+    <a href="#notifications"><span class="nav-icon">🔔</span> Notifications <span class="badge new">NEW</span></a>
+    <a href="#alerts"><span class="nav-icon">⚠</span> Alerts</a>
+    <a href="#keysystem"><span class="nav-icon">🔑</span> Key System</a>
+    <a href="#search"><span class="nav-icon">🔍</span> Search</a>
+
+    <div class="nav-section">API</div>
+    <a href="#framework-api"><span class="nav-icon">⚙</span> Framework API</a>
+    <a href="#window-api"><span class="nav-icon">⊞</span> Window API</a>
+  </nav>
+</aside>
+
+<!-- ════════════════════════════ MAIN ════════════════════════════ -->
+<main>
+  <!-- TOPBAR -->
+  <div class="topbar">
+    <span class="hamburger" onclick="openSidebar()">☰</span>
+    <div class="topbar-search">
+      <span>🔍</span>
+      <input type="text" placeholder="Search docs…" id="searchInput" oninput="filterSearch()"/>
+    </div>
+    <div class="topbar-right">
+      <div class="pill"><span class="dot"></span> v2.0.0 stable</div>
+    </div>
+  </div>
+
+  <!-- ═══ HERO ═══ -->
+  <div class="hero" id="overview">
+    <div class="hero-eyebrow">✦ Roblox UI Framework · Modern · Lightweight</div>
+    <h1>Build beautiful UIs with<br/><span>Mixusfield</span></h1>
+    <p>A fully polished, responsive, and production-ready Roblox UI framework with a complete component library, spring animations, theming, and more — designed for both mobile and PC.</p>
+    <div class="hero-actions">
+      <a href="#installation" class="btn btn-primary">↓ Get Started</a>
+      <a href="#quickstart" class="btn btn-ghost">▶ Quick Start</a>
+      <a href="#framework-api" class="btn btn-ghost">⚙ API Reference</a>
+    </div>
+
+    <div class="feature-grid" style="margin-top:40px;">
+      <div class="feature-card">
+        <div class="feature-icon">🎨</div>
+        <h4>6 Built-in Themes</h4>
+        <p>Dark, Light, AMOLED, Midnight, Rose, Ocean — with live switching.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">📱</div>
+        <h4>Mobile + PC</h4>
+        <p>Full responsive scaling from phones to ultrawides. Touch-aware.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">⚡</div>
+        <h4>Spring Animations</h4>
+        <p>Physics-based spring system + staggered entrance animations.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">🧩</div>
+        <h4>13 Components</h4>
+        <p>Button, Toggle, Slider, Dropdown, Textbox, Keybind + more.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">🔔</div>
+        <h4>Notification Stack</h4>
+        <p>Swipe-to-dismiss notifications with 4 types and custom icons.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">🔑</div>
+        <h4>Key System</h4>
+        <p>Built-in key gateway with save support and multiple gateways.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ INSTALLATION ═══ -->
+  <div class="section" id="installation">
+    <div class="section-header">
+      <div class="section-eyebrow">Getting Started</div>
+      <h2>Installation</h2>
+      <p>Mixusfield is loaded via a single <code>loadstring</code> call. No manual file management needed.</p>
+    </div>
+
+    <div class="code-wrap">
+      <div class="code-header">
+        <div class="code-dots"><div class="code-dot"></div><div class="code-dot"></div><div class="code-dot"></div></div>
+        <span class="code-lang">lua</span>
+        <button class="code-copy" onclick="copyCode(this)">Copy</button>
+      </div>
+      <pre><code><span class="kw">local</span> <span class="fn">Mixusfield</span> <span class="punc">=</span> <span class="fn">loadstring</span><span class="punc">(</span><span class="fn">game</span><span class="punc">:</span><span class="fn">HttpGet</span><span class="punc">(</span>
+    <span class="str">"https://raw.githubusercontent.com/LumeCraftors01/Mixusfield/refs/heads/main/Mixusfield.lua.txt
+"</span>
+<span class="punc">))()</span></code></pre>
+    </div>
+
+    <div class="callout info">
+      <span class="callout-icon">ℹ</span>
+      <div class="callout-body">
+        <strong>HttpService Required</strong>
+        Make sure your game or executor has <code>HttpEnabled</code>. In Roblox Studio go to <em>Game Settings → Security → Allow HTTP Requests</em>.
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ QUICK START ═══ -->
+  <div class="section" id="quickstart">
+    <div class="section-header">
+      <div class="section-eyebrow">Getting Started</div>
+      <h2>Quick Start</h2>
+      <p>Create a window with tabs and components in under 20 lines.</p>
+    </div>
+
+    <div class="code-wrap">
+      <div class="code-header">
+        <div class="code-dots"><div class="code-dot"></div><div class="code-dot"></div><div class="code-dot"></div></div>
+        <span class="code-lang">lua — full example</span>
+        <button class="code-copy" onclick="copyCode(this)">Copy</button>
+      </div>
+      <pre><code><span class="cmt">-- 1. Load the framework</span>
+<span class="kw">local</span> <span class="fn">Mixusfield</span> <span class="punc">=</span> <span class="fn">loadstring</span><span class="punc">(</span><span class="fn">game</span><span class="punc">:</span><span class="fn">HttpGet</span><span class="punc">(</span><span class="str">"https://raw.githubusercontent.com/LumeCraftors01/Mixusfield/refs/heads/main/Mixusfield.lua.txt"</span><span class="punc">))()</span>
+
+<span class="cmt">-- 2. Create a window</span>
+<span class="kw">local</span> <span class="fn">Window</span> <span class="punc">=</span> <span class="fn">Mixusfield</span><span class="punc">:</span><span class="fn">CreateWindow</span><span class="punc">({</span>
+    <span class="prop">Name</span>     <span class="punc">=</span> <span class="str">"My Script"</span><span class="punc">,</span>
+    <span class="prop">Subtitle</span> <span class="punc">=</span> <span class="str">"v1.0"</span><span class="punc">,</span>
+    <span class="prop">Theme</span>    <span class="punc">=</span> <span class="str">"Dark"</span><span class="punc">,</span>
+    <span class="prop">Accent</span>   <span class="punc">=</span> <span class="fn">Color3</span><span class="punc">.</span><span class="fn">fromRGB</span><span class="punc">(</span><span class="num">124</span><span class="punc">,</span> <span class="num">107</span><span class="punc">,</span> <span class="num">240</span><span class="punc">),</span>
+    <span class="prop">ToggleButton</span> <span class="punc">=</span> <span class="punc">{</span> <span class="prop">Enabled</span> <span class="punc">=</span> <span class="kw">true</span> <span class="punc">},</span>
+<span class="punc">})</span>
+
+<span class="cmt">-- 3. Add a tab</span>
+<span class="kw">local</span> <span class="fn">Main</span> <span class="punc">=</span> <span class="fn">Window</span><span class="punc">:</span><span class="fn">CreateTab</span><span class="punc">({</span>
+    <span class="prop">Name</span> <span class="punc">=</span> <span class="str">"Main"</span><span class="punc">,</span>
+    <span class="prop">Icon</span> <span class="punc">=</span> <span class="punc">{</span> <span class="prop">Type</span> <span class="punc">=</span> <span class="str">"Lucide"</span><span class="punc">,</span> <span class="prop">Source</span> <span class="punc">=</span> <span class="str">"home"</span> <span class="punc">},</span>
+<span class="punc">})</span>
+
+<span class="cmt">-- 4. Add a button</span>
+<span class="fn">Main</span><span class="punc">:</span><span class="fn">CreateButton</span><span class="punc">({</span>
+    <span class="prop">Name</span>     <span class="punc">=</span> <span class="str">"Click Me!"</span><span class="punc">,</span>
+    <span class="prop">Callback</span> <span class="punc">=</span> <span class="kw">function</span><span class="punc">()</span>
+        <span class="fn">Mixusfield</span><span class="punc">:</span><span class="fn">Notify</span><span class="punc">({</span> <span class="prop">Title</span><span class="punc">=</span><span class="str">"Hello!"</span><span class="punc">,</span> <span class="prop">Content</span><span class="punc">=</span><span class="str">"Button clicked."</span><span class="punc">,</span> <span class="prop">Type</span><span class="punc">=</span><span class="str">"success"</span> <span class="punc">})</span>
+    <span class="kw">end</span><span class="punc">,</span>
+<span class="punc">})</span></code></pre>
+    </div>
+  </div>
+
+  <!-- ═══ WINDOW ═══ -->
+  <div class="section" id="window">
+    <div class="section-header">
+      <div class="section-eyebrow">Core</div>
+      <h2>CreateWindow</h2>
+      <p>The root of every UI. Creates a draggable, minimizable, resizable window with an optional floating toggle button.</p>
+    </div>
+
+    <div class="code-wrap">
+      <div class="code-header">
+        <div class="code-dots"><div class="code-dot"></div><div class="code-dot"></div><div class="code-dot"></div></div>
+        <span class="code-lang">lua</span>
+        <button class="code-copy" onclick="copyCode(this)">Copy</button>
+      </div>
+      <pre><code><span class="kw">local</span> <span class="fn">Window</span> <span class="punc">=</span> <span class="fn">Mixusfield</span><span class="punc">:</span><span class="fn">CreateWindow</span><span class="punc">({</span>
+    <span class="prop">Name</span>        <span class="punc">=</span> <span class="str">"Mixusfield"</span><span class="punc">,</span>       <span class="cmt">-- window title</span>
+    <span class="prop">Subtitle</span>    <span class="punc">=</span> <span class="str">"v2.0.0"</span><span class="punc">,</span>          <span class="cmt">-- shown below title</span>
+    <span class="prop">Theme</span>       <span class="punc">=</span> <span class="str">"Dark"</span><span class="punc">,</span>            <span class="cmt">-- "Dark"|"Light"|"AMOLED"|"Midnight"|"Rose"|"Ocean"</span>
+    <span class="prop">Accent</span>      <span class="punc">=</span> <span class="fn">Color3</span><span class="punc">.</span><span class="fn">fromRGB</span><span class="punc">(</span><span class="num">124</span><span class="punc">,</span><span class="num">107</span><span class="punc">,</span><span class="num">240</span><span class="punc">),</span>  <span class="cmt">-- optional accent</span>
+    <span class="prop">MinSize</span>     <span class="punc">=</span> <span class="punc">{</span> <span class="prop">Width</span><span class="punc">=</span><span class="num">360</span><span class="punc">,</span> <span class="prop">Height</span><span class="punc">=</span><span class="num">260</span> <span class="punc">},</span>  <span class="cmt">-- optional</span>
+    <span class="prop">ToggleButton</span> <span class="punc">=</span> <span class="punc">{</span>
+        <span class="prop">Enabled</span> <span class="punc">=</span> <span class="kw">true</span><span class="punc">,</span>
+        <span class="prop">Icon</span>    <span class="punc">=</span> <span class="punc">{</span> <span class="prop">Type</span><span class="punc">=</span><span class="str">"Lucide"</span><span class="punc">,</span> <span class="prop">Source</span><span class="punc">=</span><span class="str">"menu"</span> <span class="punc">},</span>
+    <span class="punc">},</span>
+    <span class="prop">KeySystem</span>   <span class="punc">=</span> <span class="punc">{</span>                   <span class="cmt">-- optional key gate</span>
+        <span class="prop">Title</span>    <span class="punc">=</span> <span class="str">"Key Required"</span><span class="punc">,</span>
+        <span class="prop">Key</span>      <span class="punc">=</span> <span class="str">"MY_KEY_HERE"</span><span class="punc">,</span>
+        <span class="prop">SaveKey</span>  <span class="punc">=</span> <span class="kw">true</span><span class="punc">,</span>
+        <span class="prop">Gateways</span> <span class="punc">=</span> <span class="punc">{</span>
+            <span class="punc">{</span> <span class="prop">Name</span><span class="punc">=</span><span class="str">"Get Key"</span><span class="punc">,</span> <span class="prop">URL</span><span class="punc">=</span><span class="str">"https://..."</span> <span class="punc">},</span>
+        <span class="punc">},</span>
+    <span class="punc">},</span>
+<span class="punc">})</span></code></pre>
+    </div>
+
+    <table class="param-table">
+      <thead><tr><th>Parameter</th><th>Type</th><th>Description</th></tr></thead>
+      <tbody>
+        <tr><td>Name<span class="req-badge">req</span></td><td>string</td><td>Window title shown in the top bar.</td></tr>
+        <tr><td>Subtitle<span class="opt-badge">opt</span></td><td>string</td><td>Smaller text displayed below the title.</td></tr>
+        <tr><td>Theme<span class="opt-badge">opt</span></td><td>string</td><td>One of: <code>"Dark"</code> <code>"Light"</code> <code>"AMOLED"</code> <code>"Midnight"</code> <code>"Rose"</code> <code>"Ocean"</code>. Default: <code>"Dark"</code>.</td></tr>
+        <tr><td>Accent<span class="opt-badge">opt</span></td><td>Color3</td><td>Override the theme's accent color.</td></tr>
+        <tr><td>MinSize<span class="opt-badge">opt</span></td><td>table</td><td><code>{ Width, Height }</code> — minimum resize dimensions.</td></tr>
+        <tr><td>ToggleButton<span class="opt-badge">opt</span></td><td>table</td><td>Floating button to show/hide the window. Set <code>Enabled = true</code> to activate.</td></tr>
+        <tr><td>KeySystem<span class="opt-badge">opt</span></td><td>table</td><td>Key gate before showing UI. See <a href="#keysystem" style="color:var(--accent)">Key System</a>.</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- ═══ TABS ═══ -->
+  <div class="section" id="tabs">
+    <div class="section-header">
+      <div class="section-eyebrow">Core</div>
+      <h2>Tabs</h2>
+      <p>Organize your UI into pages. Each tab can have its own components.</p>
+    </div>
+
+    <div class="code-wrap">
+      <div class="code-header">
+        <div class="code-dots"><div class="code-dot"></div><div class="code-dot"></div><div class="code-dot"></div></div>
+        <span class="code-lang">lua</span>
+        <button class="code-copy" onclick="copyCode(this)">Copy</button>
+      </div>
+      <pre><code><span class="kw">local</span> <span class="fn">Main</span>     <span class="punc">=</span> <span class="fn">Window</span><span class="punc">:</span><span class="fn">CreateTab</span><span class="punc">({</span> <span class="prop">Name</span><span class="punc">=</span><span class="str">"Main"</span><span class="punc">,</span>     <span class="prop">Icon</span><span class="punc">=</span><span class="punc">{</span><span class="prop">Type</span><span class="punc">=</span><span class="str">"Lucide"</span><span class="punc">,</span><span class="prop">Source</span><span class="punc">=</span><span class="str">"home"</span><span class="punc">}</span>     <span class="punc">})</span>
+<span class="kw">local</span> <span class="fn">Settings</span> <span class="punc">=</span> <span class="fn">Window</span><span class="punc">:</span><span class="fn">CreateTab</span><span class="punc">({</span> <span class="prop">Name</span><span class="punc">=</span><span class="str">"Settings"</span><span class="punc">,</span> <span class="prop">Icon</span><span class="punc">=</span><span class="punc">{</span><span class="prop">Type</span><span class="punc">=</span><span class="str">"Lucide"</span><span class="punc">,</span><span class="prop">Source</span><span class="punc">=</span><span class="str">"settings"</span><span class="punc">}</span> <span class="punc">})</span>
+<span class="kw">local</span> <span class="fn">About</span>    <span class="punc">=</span> <span class="fn">Window</span><span class="punc">:</span><span class="fn">CreateTab</span><span class="punc">({</span> <span class="prop">Name</span><span class="punc">=</span><span class="str">"About"</span><span class="punc">,</span>    <span class="prop">Icon</span><span class="punc">=</span><span class="punc">{</span><span class="prop">Type</span><span class="punc">=</span><span class="str">"Lucide"</span><span class="punc">,</span><span class="prop">Source</span><span class="punc">=</span><span class="str">"info"</span><span class="punc">}</span>     <span class="punc">})</span></code></pre>
+    </div>
+
+    <table class="param-table">
+      <thead><tr><th>Parameter</th><th>Type</th><th>Description</th></tr></thead>
+      <tbody>
+        <tr><td>Name<span class="req-badge">req</span></td><td>string</td><td>Tab label text.</td></tr>
+        <tr><td>Icon<span class="opt-badge">opt</span></td><td>table</td><td><code>{ Type="Lucide", Source="icon-name" }</code> or <code>{ Type="Asset", Source="rbxassetid://..." }</code></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- ═══ THEMES ═══ -->
+  <div class="section" id="themes">
+    <div class="section-header">
+      <div class="section-eyebrow">Core</div>
+      <h2>Themes</h2>
+      <p>Mixusfield ships with 6 hand-crafted themes. Switch them live with <code>Mixusfield:SetTheme()</code>.</p>
+    </div>
+
+    <div class="theme-grid">
+      <!-- Dark -->
+      <div class="theme-card">
+        <div class="theme-preview" style="background:#0e0e14;">
+          <div class="mini-win" style="background:#13131c;">
+            <div class="mini-top" style="background:#10101a;"><div class="mini-dot" style="background:#ff5f57;"></div><div class="mini-dot" style="background:#ffbd2e;"></div><div class="mini-dot" style="background:#28c840;"></div></div>
+            <div class="mini-body"><div class="mini-sidebar" style="background:#0e0e14;"></div><div class="mini-content"><div class="mini-line" style="background:#7c6bf0;width:70%;"></div><div class="mini-line" style="background:#26263a;width:50%;"></div><div class="mini-line" style="background:#26263a;width:80%;"></div></div></div>
+          </div>
+        </div>
+        <div class="theme-name" style="background:#0e0e14;color:#e8e8f0;">Dark <div class="theme-accent-dot" style="background:#7c6bf0;"></div></div>
+      </div>
+      <!-- Light -->
+      <div class="theme-card">
+        <div class="theme-preview" style="background:#f4f4fa;">
+          <div class="mini-win" style="background:#eaeaf4;">
+            <div class="mini-top" style="background:#fff;"><div class="mini-dot" style="background:#ff5f57;"></div><div class="mini-dot" style="background:#ffbd2e;"></div><div class="mini-dot" style="background:#28c840;"></div></div>
+            <div class="mini-body"><div class="mini-sidebar" style="background:#f4f4fa;"></div><div class="mini-content"><div class="mini-line" style="background:#6c5cf0;width:70%;"></div><div class="mini-line" style="background:#cccce0;width:50%;"></div><div class="mini-line" style="background:#cccce0;width:80%;"></div></div></div>
+          </div>
+        </div>
+        <div class="theme-name" style="background:#eaeaf4;color:#1a1a2e;">Light <div class="theme-accent-dot" style="background:#6c5cf0;"></div></div>
+      </div>
+      <!-- AMOLED -->
+      <div class="theme-card">
+        <div class="theme-preview" style="background:#000;">
+          <div class="mini-win" style="background:#060606;">
+            <div class="mini-top" style="background:#030303;"><div class="mini-dot" style="background:#ff5f57;"></div><div class="mini-dot" style="background:#ffbd2e;"></div><div class="mini-dot" style="background:#28c840;"></div></div>
+            <div class="mini-body"><div class="mini-sidebar" style="background:#000;"></div><div class="mini-content"><div class="mini-line" style="background:#9b8bff;width:70%;"></div><div class="mini-line" style="background:#181818;width:50%;"></div><div class="mini-line" style="background:#181818;width:80%;"></div></div></div>
+          </div>
+        </div>
+        <div class="theme-name" style="background:#060606;color:#f0f0f0;">AMOLED <div class="theme-accent-dot" style="background:#9b8bff;"></div></div>
+      </div>
+      <!-- Midnight -->
+      <div class="theme-card">
+        <div class="theme-preview" style="background:#070b14;">
+          <div class="mini-win" style="background:#0c1220;">
+            <div class="mini-top" style="background:#090e1c;"><div class="mini-dot" style="background:#ff5f57;"></div><div class="mini-dot" style="background:#ffbd2e;"></div><div class="mini-dot" style="background:#28c840;"></div></div>
+            <div class="mini-body"><div class="mini-sidebar" style="background:#070b14;"></div><div class="mini-content"><div class="mini-line" style="background:#89b4fa;width:70%;"></div><div class="mini-line" style="background:#1e2a42;width:50%;"></div><div class="mini-line" style="background:#1e2a42;width:80%;"></div></div></div>
+          </div>
+        </div>
+        <div class="theme-name" style="background:#0c1220;color:#cdd6f4;">Midnight <div class="theme-accent-dot" style="background:#89b4fa;"></div></div>
+      </div>
+      <!-- Rose -->
+      <div class="theme-card">
+        <div class="theme-preview" style="background:#120810;">
+          <div class="mini-win" style="background:#1c0e18;">
+            <div class="mini-top" style="background:#160a14;"><div class="mini-dot" style="background:#ff5f57;"></div><div class="mini-dot" style="background:#ffbd2e;"></div><div class="mini-dot" style="background:#28c840;"></div></div>
+            <div class="mini-body"><div class="mini-sidebar" style="background:#120810;"></div><div class="mini-content"><div class="mini-line" style="background:#f28fad;width:70%;"></div><div class="mini-line" style="background:#3a1e36;width:50%;"></div><div class="mini-line" style="background:#3a1e36;width:80%;"></div></div></div>
+          </div>
+        </div>
+        <div class="theme-name" style="background:#1c0e18;color:#f4d4e8;">Rose <div class="theme-accent-dot" style="background:#f28fad;"></div></div>
+      </div>
+      <!-- Ocean -->
+      <div class="theme-card">
+        <div class="theme-preview" style="background:#070e16;">
+          <div class="mini-win" style="background:#0c1622;">
+            <div class="mini-top" style="background:#090f1c;"><div class="mini-dot" style="background:#ff5f57;"></div><div class="mini-dot" style="background:#ffbd2e;"></div><div class="mini-dot" style="background:#28c840;"></div></div>
+            <div class="mini-body"><div class="mini-sidebar" style="background:#070e16;"></div><div class="mini-content"><div class="mini-line" style="background:#4fc3f7;width:70%;"></div><div class="mini-line" style="background:#1a2e44;width:50%;"></div><div class="mini-line" style="background:#1a2e44;width:80%;"></div></div></div>
+          </div>
+        </div>
+        <div class="theme-name" style="background:#0c1622;color:#c8e6f8;">Ocean <div class="theme-accent-dot" style="background:#4fc3f7;"></div></div>
+      </div>
+    </div>
+
+    <div class="code-wrap" style="margin-top:24px;">
+      <div class="code-header">
+        <div class="code-dots"><div class="code-dot"></div><div class="code-dot"></div><div class="code-dot"></div></div>
+        <span class="code-lang">lua — switching themes at runtime</span>
+        <button class="code-copy" onclick="copyCode(this)">Copy</button>
+      </div>
+      <pre><code><span class="fn">Mixusfield</span><span class="punc">:</span><span class="fn">SetTheme</span><span class="punc">(</span><span class="str">"Ocean"</span><span class="punc">)</span>
+
+<span class="cmt">-- Or let the user pick it from a dropdown:</span>
+<span class="fn">Settings</span><span class="punc">:</span><span class="fn">CreateDropdown</span><span class="punc">({</span>
+    <span class="prop">Name</span>     <span class="punc">=</span> <span class="str">"Theme"</span><span class="punc">,</span>
+    <span class="prop">Options</span>  <span class="punc">=</span> <span class="punc">{</span> <span class="str">"Dark"</span><span class="punc">,</span> <span class="str">"Light"</span><span class="punc">,</span> <span class="str">"AMOLED"</span><span class="punc">,</span> <span class="str">"Midnight"</span><span class="punc">,</span> <span class="str">"Rose"</span><span class="punc">,</span> <span class="str">"Ocean"</span> <span class="punc">},</span>
+    <span class="prop">Default</span>  <span class="punc">=</span> <span class="str">"Dark"</span><span class="punc">,</span>
+    <span class="prop">Callback</span> <span class="punc">=</span> <span class="kw">function</span><span class="punc">(</span>val<span class="punc">)</span> <span class="fn">Mixusfield</span><span class="punc">:</span><span class="fn">SetTheme</span><span class="punc">(</span>val<span class="punc">)</span> <span class="kw">end</span><span class="punc">,</span>
+<span class="punc">})</span></code></pre>
+    </div>
+  </div>
+
+  <hr class="divider"/>
+
+  <!-- ═══ COMPONENTS OVERVIEW ═══ -->
+  <div class="section">
+    <div class="section-eyebrow">Components</div>
+    <h2 style="font-family:var(--font-head);font-size:26px;font-weight:800;letter-spacing:-0.5px;margin-bottom:10px;">Component Library</h2>
+    <p style="color:var(--textdim);margin-bottom:24px;">All components are added to a <strong>Tab</strong> object. Each returns a handle with <code>:Get()</code> and <code>:Set()</code> methods.</p>
+    <div class="comp-grid">
+      <div class="comp-card"><h3>Button <span class="tag">interactive</span></h3><p>Clickable action with optional icon, tooltip, and ripple effect.</p><div class="api-list">No state handle returned.</div></div>
+      <div class="comp-card"><h3>Toggle <span class="tag">interactive</span></h3><p>On/off boolean switch with spring animation.</p><div class="api-list"><span>toggle:Get()</span> → bool<br/><span>toggle:Set(bool)</span></div></div>
+      <div class="comp-card"><h3>Slider <span class="tag">interactive</span></h3><p>Draggable numeric range input with suffix support.</p><div class="api-list"><span>slider:Get()</span> → number<br/><span>slider:Set(number)</span></div></div>
+      <div class="comp-card"><h3>Dropdown <span class="tag">interactive</span></h3><p>Option picker with search and live refresh.</p><div class="api-list"><span>dd:Get()</span> → string<br/><span>dd:Set(str)</span> · <span>dd:Refresh(tbl)</span></div></div>
+      <div class="comp-card"><h3>Textbox <span class="tag">input</span></h3><p>Free-text input with placeholder support.</p><div class="api-list"><span>tb:Get()</span> → string<br/><span>tb:Set(str)</span></div></div>
+      <div class="comp-card"><h3>Keybind <span class="tag">input</span></h3><p>Key assignment widget — click to record a keypress.</p><div class="api-list"><span>kb:Get()</span> → KeyCode<br/><span>kb:Set(KeyCode)</span></div></div>
+      <div class="comp-card"><h3>ColorPicker <span class="tag">input</span></h3><p>HSV color picker with hex display.</p><div class="api-list"><span>cp:Get()</span> → Color3<br/><span>cp:Set(Color3)</span></div></div>
+      <div class="comp-card"><h3>ProgressBar <span class="tag">display</span></h3><p>0–100 animated progress indicator.</p><div class="api-list"><span>pb:Get()</span> → number<br/><span>pb:Set(0–100)</span></div></div>
+      <div class="comp-card"><h3>RadioGroup <span class="tag">interactive</span></h3><p>Mutually exclusive option selector.</p><div class="api-list"><span>rg:Get()</span> → string<br/><span>rg:Set(str)</span></div></div>
+      <div class="comp-card"><h3>Accordion <span class="tag">layout</span></h3><p>Collapsible group that can contain any other components.</p><div class="api-list">Returns <span>(accordion, innerTab)</span></div></div>
+    </div>
+  </div>
+
+  <!-- ═══ BUTTON ═══ -->
+  <div class="section" id="button">
+    <div class="section-eyebrow">Component</div>
+    <h2 style="font-family:var(--font-head);font-size:24px;font-weight:800;letter-spacing:-0.5px;margin-bottom:16px;">Button</h2>
+    <div class="code-wrap">
+      <div class="code-header"><div class="code-dots"><div class="code-dot"></div><div class="code-dot"></div><div class="code-dot"></div></div><span class="code-lang">lua</span><button class="code-copy" onclick="copyCode(this)">Copy</button></div>
+      <pre><code><span class="fn">Tab</span><span class="punc">:</span><span class="fn">CreateButton</span><span class="punc">({</span>
+    <span class="prop">Name</span>     <span class="punc">=</span> <span class="str">"Execute Script"</span><span class="punc">,</span>
+    <span class="prop">Icon</span>     <span class="punc">=</span> <span class="punc">{</span> <span class="prop">Type</span><span class="punc">=</span><span class="str">"Lucide"</span><span class="punc">,</span> <span class="prop">Source</span><span class="punc">=</span><span class="str">"play"</span> <span class="punc">},</span>
+    <span class="prop">Tooltip</span>  <span class="punc">=</span> <span class="str">"Run the loaded script"</span><span class="punc">,</span>
+    <span class="prop">Callback</span> <span class="punc">=</span> <span class="kw">function</span><span class="punc">()</span>
+        <span class="fn">print</span><span class="punc">(</span><span class="str">"Clicked!"</span><span class="punc">)</span>
+    <span class="kw">end</span><span class="punc">,</span>
+<span class="punc">})</span></code></pre>
+    </div>
+    <table class="param-table">
+      <thead><tr><th>Parameter</th><th>Type</th><th>Description</th></tr></thead>
+      <tbody>
+        <tr><td>Name<span class="req-badge">req</span></td><td>string</td><td>Button label.</td></tr>
+        <tr><td>Icon<span class="opt-badge">opt</span></td><td>table</td><td>Icon config <code>{ Type, Source }</code>.</td></tr>
+        <tr><td>Tooltip<span class="opt-badge">opt</span></td><td>string</td><td>Hover tooltip text.</td></tr>
+        <tr><td>Callback<span class="req-badge">req</span></td><td>function</td><td>Called on click. Wrapped in <code>pcall</code>.</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- ═══ TOGGLE ═══ -->
+  <div class="section" id="toggle">
+    <div class="section-eyebrow">Component</div>
+    <h2 style="font-family:var(--font-head);font-size:24px;font-weight:800;letter-spacing:-0.5px;margin-bottom:16px;">Toggle</h2>
+    <div class="code-wrap">
+      <div class="code-header"><div class="code-dots"><div class="code-dot"></div><div class="code-dot"></div><div class="code-dot"></div></div><span class="code-lang">lua</span><button class="code-copy" onclick="copyCode(this)">Copy</button></div>
+      <pre><code><span class="kw">local</span> <span class="fn">flyToggle</span> <span class="punc">=</span> <span class="fn">Tab</span><span class="punc">:</span><span class="fn">CreateToggle</span><span class="punc">({</span>
+    <span class="prop">Name</span>     <span class="punc">=</span> <span class="str">"Enable Fly"</span><span class="punc">,</span>
+    <span class="prop">Default</span>  <span class="punc">=</span> <span class="kw">false</span><span class="punc">,</span>
+    <span class="prop">Tooltip</span>  <span class="punc">=</span> <span class="str">"Toggle fly mode"</span><span class="punc">,</span>
+    <span class="prop">Callback</span> <span class="punc">=</span> <span class="kw">function</span><span class="punc">(</span>val<span class="punc">)</span>
+        <span class="fn">print</span><span class="punc">(</span><span class="str">"Fly enabled:"</span><span class="punc">,</span> val<span class="punc">)</span>
+    <span class="kw">end</span><span class="punc">,</span>
+<span class="punc">})</span>
+
+<span class="cmt">-- Later:</span>
+<span class="fn">flyToggle</span><span class="punc">:</span><span class="fn">Set</span><span class="punc">(</span><span class="kw">true</span><span class="punc">)</span>
+<span class="fn">print</span><span class="punc">(</span><span class="fn">flyToggle</span><span class="punc">:</span><span class="fn">Get</span><span class="punc">())</span>  <span class="cmt">-- true</span></code></pre>
+    </div>
+  </div>
+
+  <!-- ═══ SLIDER ═══ -->
+  <div class="section" id="slider">
+    <div class="section-eyebrow">Component</div>
+    <h2 style="font-family:var(--font-head);font-size:24px;font-weight:800;letter-spacing:-0.5px;margin-bottom:16px;">Slider</h2>
+    <div class="code-wrap">
+      <div class="code-header"><div class="code-dots"><div class="code-dot"></div><div class="code-dot"></div><div class="code-dot"></div></div><span class="code-lang">lua</span><button class="code-copy" onclick="copyCode(this)">Copy</button></div>
+      <pre><code><span class="kw">local</span> <span class="fn">speedSlider</span> <span class="punc">=</span> <span class="fn">Tab</span><span class="punc">:</span><span class="fn">CreateSlider</span><span class="punc">({</span>
+    <span class="prop">Name</span>      <span class="punc">=</span> <span class="str">"Walk Speed"</span><span class="punc">,</span>
+    <span class="prop">Min</span>       <span class="punc">=</span> <span class="num">16</span><span class="punc">,</span>
+    <span class="prop">Max</span>       <span class="punc">=</span> <span class="num">250</span><span class="punc">,</span>
+    <span class="prop">Default</span>   <span class="punc">=</span> <span class="num">16</span><span class="punc">,</span>
+    <span class="prop">Increment</span> <span class="punc">=</span> <span class="num">1</span><span class="punc">,</span>
+    <span class="prop">Suffix</span>    <span class="punc">=</span> <span class="str">" studs/s"</span><span class="punc">,</span>
+    <span class="prop">Callback</span>  <span class="punc">=</span> <span class="kw">function</span><span class="punc">(</span>val<span class="punc">)</span>
+        <span class="fn">game</span><span class="punc">.</span><span class="fn">Players</span><span class="punc">.</span><span class="fn">LocalPlayer</span><span class="punc">.</span><span class="fn">Character</span><span class="punc">.</span><span class="fn">Humanoid</span><span class="punc">.</span><span class="prop">WalkSpeed</span> <span class="punc">=</span> val
+    <span class="kw">end</span><span class="punc">,</span>
+<span class="punc">})</span></code></pre>
+    </div>
+    <table class="param-table">
+      <thead><tr><th>Parameter</th><th>Type</th><th>Description</th></tr></thead>
+      <tbody>
+        <tr><td>Min / Max<span class="req-badge">req</span></td><td>number</td><td>Range bounds.</td></tr>
+        <tr><td>Default<span class="opt-badge">opt</span></td><td>number</td><td>Initial value. Defaults to <code>Min</code>.</td></tr>
+        <tr><td>Increment<span class="opt-badge">opt</span></td><td>number</td><td>Step size. Default: <code>1</code>.</td></tr>
+        <tr><td>Suffix<span class="opt-badge">opt</span></td><td>string</td><td>Text appended to the value display (e.g. <code>" HP"</code>).</td></tr>
+        <tr><td>Callback<span class="req-badge">req</span></td><td>function(number)</td><td>Fires on every change with the new value.</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- ═══ DROPDOWN ═══ -->
+  <div class="section" id="dropdown">
+    <div class="section-eyebrow">Component</div>
+    <h2 style="font-family:var(--font-head);font-size:24px;font-weight:800;letter-spacing:-0.5px;margin-bottom:16px;">Dropdown</h2>
+    <div class="code-wrap">
+      <div class="code-header"><div class="code-dots"><div class="code-dot"></div><div class="code-dot"></div><div class="code-dot"></div></div><span class="code-lang">lua</span><button class="code-copy" onclick="copyCode(this)">Copy</button></div>
+      <pre><code><span class="kw">local</span> <span class="fn">modeDrop</span> <span class="punc">=</span> <span class="fn">Tab</span><span class="punc">:</span><span class="fn">CreateDropdown</span><span class="punc">({</span>
+    <span class="prop">Name</span>     <span class="punc">=</span> <span class="str">"Game Mode"</span><span class="punc">,</span>
+    <span class="prop">Options</span>  <span class="punc">=</span> <span class="punc">{</span> <span class="str">"Normal"</span><span class="punc">,</span> <span class="str">"Creative"</span><span class="punc">,</span> <span class="str">"Hardcore"</span> <span class="punc">},</span>
+    <span class="prop">Default</span>  <span class="punc">=</span> <span class="str">"Normal"</span><span class="punc">,</span>
+    <span class="prop">Callback</span> <span class="punc">=</span> <span class="kw">function</span><span class="punc">(</span>val<span class="punc">)</span> <span class="fn">print</span><span class="punc">(</span><span class="str">"Mode:"</span><span class="punc">,</span> val<span class="punc">)</span> <span class="kw">end</span><span class="punc">,</span>
+<span class="punc">})</span>
+
+<span class="cmt">-- Refresh options dynamically:</span>
+<span class="fn">modeDrop</span><span class="punc">:</span><span class="fn">Refresh</span><span class="punc">({</span> <span class="str">"Easy"</span><span class="punc">,</span> <span class="str">"Medium"</span><span class="punc">,</span> <span class="str">"Hard"</span> <span class="punc">})</span></code></pre>
+    </div>
+  </div>
+
+  <!-- ═══ TEXTBOX ═══ -->
+  <div class="section" id="textbox">
+    <div class="section-eyebrow">Component</div>
+    <h2 style="font-family:var(--font-head);font-size:24px;font-weight:800;letter-spacing:-0.5px;margin-bottom:16px;">Textbox</h2>
+    <div class="code-wrap">
+      <div class="code-header"><div class="code-dots"><div class="code-dot"></div><div class="code-dot"></div><div class="code-dot"></div></div><span class="code-lang">lua</span><button class="code-copy" onclick="copyCode(this)">Copy</button></div>
+      <pre><code><span class="fn">Tab</span><span class="punc">:</span><span class="fn">CreateTextbox</span><span class="punc">({</span>
+    <span class="prop">Name</span>        <span class="punc">=</span> <span class="str">"Player Name"</span><span class="punc">,</span>
+    <span class="prop">Placeholder</span> <span class="punc">=</span> <span class="str">"Enter player..."</span><span class="punc">,</span>
+    <span class="prop">Callback</span>    <span class="punc">=</span> <span class="kw">function</span><span class="punc">(</span>val<span class="punc">)</span>
+        <span class="fn">print</span><span class="punc">(</span><span class="str">"Name:"</span><span class="punc">,</span> val<span class="punc">)</span>
+    <span class="kw">end</span><span class="punc">,</span>
+<span class="punc">})</span></code></pre>
+    </div>
+  </div>
+
+  <!-- ═══ KEYBIND ═══ -->
+  <div class="section" id="keybind">
+    <div class="section-eyebrow">Component</div>
+    <h2 style="font-family:var(--font-head);font-size:24px;font-weight:800;letter-spacing:-0.5px;margin-bottom:16px;">Keybind</h2>
+    <div class="code-wrap">
+      <div class="code-header"><div class="code-dots"><div class="code-dot"></div><div class="code-dot"></div><div class="code-dot"></div></div><span class="code-lang">lua</span><button class="code-copy" onclick="copyCode(this)">Copy</button></div>
+      <pre><code><span class="fn">Tab</span><span class="punc">:</span><span class="fn">CreateKeybind</span><span class="punc">({</span>
+    <span class="prop">Name</span>     <span class="punc">=</span> <span class="str">"Toggle UI"</span><span class="punc">,</span>
+    <span class="prop">Default</span>  <span class="punc">=</span> <span class="fn">Enum</span><span class="punc">.</span><span class="fn">KeyCode</span><span class="punc">.</span><span class="prop">RightShift</span><span class="punc">,</span>
+    <span class="prop">Callback</span> <span class="punc">=</span> <span class="kw">function</span><span class="punc">(</span>key<span class="punc">)</span>
+        <span class="fn">print</span><span class="punc">(</span><span class="str">"Key pressed:"</span><span class="punc">,</span> key<span class="punc">.</span><span class="prop">Name</span><span class="punc">)</span>
+    <span class="kw">end</span><span class="punc">,</span>
+<span class="punc">})</span></code></pre>
+    </div>
+  </div>
+
+  <!-- ═══ COLORPICKER ═══ -->
+  <div class="section" id="colorpicker">
+    <div class="section-eyebrow">Component</div>
+    <h2 style="font-family:var(--font-head);font-size:24px;font-weight:800;letter-spacing:-0.5px;margin-bottom:16px;">ColorPicker</h2>
+    <div class="code-wrap">
+      <div class="code-header"><div class="code-dots"><div class="code-dot"></div><div class="code-dot"></div><div class="code-dot"></div></div><span class="code-lang">lua</span><button class="code-copy" onclick="copyCode(this)">Copy</button></div>
+      <pre><code><span class="kw">local</span> <span class="fn">colorPick</span> <span class="punc">=</span> <span class="fn">Tab</span><span class="punc">:</span><span class="fn">CreateColorPicker</span><span class="punc">({</span>
+    <span class="prop">Name</span>     <span class="punc">=</span> <span class="str">"Background Color"</span><span class="punc">,</span>
+    <span class="prop">Default</span>  <span class="punc">=</span> <span class="fn">Color3</span><span class="punc">.</span><span class="fn">fromRGB</span><span class="punc">(</span><span class="num">124</span><span class="punc">,</span> <span class="num">107</span><span class="punc">,</span> <span class="num">240</span><span class="punc">),</span>
+    <span class="prop">Callback</span> <span class="punc">=</span> <span class="kw">function</span><span class="punc">(</span>color<span class="punc">)</span>
+        <span class="fn">print</span><span class="punc">(</span><span class="str">"Color:"</span><span class="punc">,</span> color<span class="punc">)</span>
+    <span class="kw">end</span><span class="punc">,</span>
+<span class="punc">})</span></code></pre>
+    </div>
+  </div>
+
+  <!-- ═══ PROGRESSBAR ═══ -->
+  <div class="section" id="progressbar">
+    <div class="section-eyebrow">Component</div>
+    <h2 style="font-family:var(--font-head);font-size:24px;font-weight:800;letter-spacing:-0.5px;margin-bottom:16px;">ProgressBar</h2>
+    <div class="code-wrap">
+      <div class="code-header"><div class="code-dots"><div class="code-dot"></div><div class="code-dot"></div><div class="code-dot"></div></div><span class="code-lang">lua</span><button class="code-copy" onclick="copyCode(this)">Copy</button></div>
+      <pre><code><span class="kw">local</span> <span class="fn">dlBar</span> <span class="punc">=</span> <span class="fn">Tab</span><span class="punc">:</span><span class="fn">CreateProgressBar</span><span class="punc">({</span>
+    <span class="prop">Name</span>     <span class="punc">=</span> <span class="str">"Download Progress"</span><span class="punc">,</span>
+    <span class="prop">Value</span>    <span class="punc">=</span> <span class="num">0</span><span class="punc">,</span>
+    <span class="prop">ShowText</span> <span class="punc">=</span> <span class="kw">true</span><span class="punc">,</span>
+<span class="punc">})</span>
+
+<span class="cmt">-- Animate to 100%:</span>
+<span class="kw">for</span> i <span class="punc">=</span> <span class="num">1</span><span class="punc">,</span> <span class="num">100</span> <span class="kw">do</span>
+    <span class="fn">dlBar</span><span class="punc">:</span><span class="fn">Set</span><span class="punc">(</span>i<span class="punc">)</span>
+    <span class="fn">task</span><span class="punc">.</span><span class="fn">wait</span><span class="punc">(</span><span class="num">0.02</span><span class="punc">)</span>
+<span class="kw">end</span></code></pre>
+    </div>
+  </div>
+
+  <!-- ═══ RADIOGROUP ═══ -->
+  <div class="section" id="radiogroup">
+    <div class="section-eyebrow">Component</div>
+    <h2 style="font-family:var(--font-head);font-size:24px;font-weight:800;letter-spacing:-0.5px;margin-bottom:16px;">RadioGroup</h2>
+    <div class="code-wrap">
+      <div class="code-header"><div class="code-dots"><div class="code-dot"></div><div class="code-dot"></div><div class="code-dot"></div></div><span class="code-lang">lua</span><button class="code-copy" onclick="copyCode(this)">Copy</button></div>
+      <pre><code><span class="kw">local</span> <span class="fn">quality</span> <span class="punc">=</span> <span class="fn">Tab</span><span class="punc">:</span><span class="fn">CreateRadioGroup</span><span class="punc">({</span>
+    <span class="prop">Name</span>     <span class="punc">=</span> <span class="str">"Render Quality"</span><span class="punc">,</span>
+    <span class="prop">Options</span>  <span class="punc">=</span> <span class="punc">{</span> <span class="str">"Low"</span><span class="punc">,</span> <span class="str">"Medium"</span><span class="punc">,</span> <span class="str">"High"</span><span class="punc">,</span> <span class="str">"Ultra"</span> <span class="punc">},</span>
+    <span class="prop">Default</span>  <span class="punc">=</span> <span class="str">"High"</span><span class="punc">,</span>
+    <span class="prop">Callback</span> <span class="punc">=</span> <span class="kw">function</span><span class="punc">(</span>val<span class="punc">)</span> <span class="fn">print</span><span class="punc">(</span><span class="str">"Quality:"</span><span class="punc">,</span> val<span class="punc">)</span> <span class="kw">end</span><span class="punc">,</span>
+<span class="punc">})</span></code></pre>
+    </div>
+  </div>
+
+  <!-- ═══ ACCORDION ═══ -->
+  <div class="section" id="accordion">
+    <div class="section-eyebrow">Component</div>
+    <h2 style="font-family:var(--font-head);font-size:24px;font-weight:800;letter-spacing:-0.5px;margin-bottom:16px;">Accordion</h2>
+    <p style="color:var(--textdim);margin-bottom:16px;">A collapsible group. The second return value is a tab-like handle you can add components to.</p>
+    <div class="code-wrap">
+      <div class="code-header"><div class="code-dots"><div class="code-dot"></div><div class="code-dot"></div><div class="code-dot"></div></div><span class="code-lang">lua</span><button class="code-copy" onclick="copyCode(this)">Copy</button></div>
+      <pre><code><span class="kw">local</span> <span class="fn">adv</span><span class="punc">,</span> <span class="fn">advTab</span> <span class="punc">=</span> <span class="fn">Tab</span><span class="punc">:</span><span class="fn">CreateAccordion</span><span class="punc">({</span>
+    <span class="prop">Name</span>    <span class="punc">=</span> <span class="str">"Advanced Options"</span><span class="punc">,</span>
+    <span class="prop">Icon</span>    <span class="punc">=</span> <span class="punc">{</span> <span class="prop">Type</span><span class="punc">=</span><span class="str">"Lucide"</span><span class="punc">,</span> <span class="prop">Source</span><span class="punc">=</span><span class="str">"settings"</span> <span class="punc">},</span>
+    <span class="prop">Content</span> <span class="punc">=</span> <span class="kw">function</span><span class="punc">(</span>t<span class="punc">)</span>
+        t<span class="punc">:</span><span class="fn">CreateToggle</span><span class="punc">({</span> <span class="prop">Name</span><span class="punc">=</span><span class="str">"Debug Mode"</span><span class="punc">,</span> <span class="prop">Callback</span><span class="punc">=</span><span class="kw">function</span><span class="punc">(</span>v<span class="punc">)</span> <span class="fn">print</span><span class="punc">(</span>v<span class="punc">)</span> <span class="kw">end</span> <span class="punc">})</span>
+        t<span class="punc">:</span><span class="fn">CreateSlider</span><span class="punc">({</span> <span class="prop">Name</span><span class="punc">=</span><span class="str">"FOV"</span><span class="punc">,</span> <span class="prop">Min</span><span class="punc">=</span><span class="num">60</span><span class="punc">,</span> <span class="prop">Max</span><span class="punc">=</span><span class="num">120</span><span class="punc">,</span> <span class="prop">Default</span><span class="punc">=</span><span class="num">90</span><span class="punc">,</span> <span class="prop">Callback</span><span class="punc">=</span><span class="kw">function</span><span class="punc">(</span>v<span class="punc">)</span> <span class="fn">print</span><span class="punc">(</span>v<span class="punc">)</span> <span class="kw">end</span> <span class="punc">})</span>
+    <span class="kw">end</span><span class="punc">,</span>
+<span class="punc">})</span></code></pre>
+    </div>
+  </div>
+
+  <!-- ═══ SECTION / DIVIDER ═══ -->
+  <div class="section" id="section-comp">
+    <div class="section-eyebrow">Component</div>
+    <h2 style="font-family:var(--font-head);font-size:24px;font-weight:800;letter-spacing:-0.5px;margin-bottom:16px;">Section &amp; Divider</h2>
+    <div class="code-wrap">
+      <div class="code-header"><div class="code-dots"><div class="code-dot"></div><div class="code-dot"></div><div class="code-dot"></div></div><span class="code-lang">lua</span><button class="code-copy" onclick="copyCode(this)">Copy</button></div>
+      <pre><code><span class="fn">Tab</span><span class="punc">:</span><span class="fn">CreateSection</span><span class="punc">({</span> <span class="prop">Name</span> <span class="punc">=</span> <span class="str">"Actions"</span> <span class="punc">})</span>
+
+<span class="cmt">-- Later in the tab, add a labeled or plain divider:</span>
+<span class="fn">Tab</span><span class="punc">:</span><span class="fn">CreateDivider</span><span class="punc">({</span> <span class="prop">Label</span> <span class="punc">=</span> <span class="str">"Appearance"</span> <span class="punc">})</span>  <span class="cmt">-- with label</span>
+<span class="fn">Tab</span><span class="punc">:</span><span class="fn">CreateDivider</span><span class="punc">({})</span>                          <span class="cmt">-- plain line</span></code></pre>
+    </div>
+  </div>
+
+  <!-- ═══ LABEL / PARAGRAPH ═══ -->
+  <div class="section" id="label">
+    <div class="section-eyebrow">Component</div>
+    <h2 style="font-family:var(--font-head);font-size:24px;font-weight:800;letter-spacing:-0.5px;margin-bottom:16px;">Label &amp; Paragraph</h2>
+    <div class="code-wrap">
+      <div class="code-header"><div class="code-dots"><div class="code-dot"></div><div class="code-dot"></div><div class="code-dot"></div></div><span class="code-lang">lua</span><button class="code-copy" onclick="copyCode(this)">Copy</button></div>
+      <pre><code><span class="cmt">-- Single-line label</span>
+<span class="fn">Tab</span><span class="punc">:</span><span class="fn">CreateLabel</span><span class="punc">({</span> <span class="prop">Name</span> <span class="punc">=</span> <span class="str">"Version: 2.0.0"</span> <span class="punc">})</span>
+
+<span class="cmt">-- Multiline paragraph with title</span>
+<span class="fn">Tab</span><span class="punc">:</span><span class="fn">CreateParagraph</span><span class="punc">({</span>
+    <span class="prop">Title</span>   <span class="punc">=</span> <span class="str">"About Mixusfield"</span><span class="punc">,</span>
+    <span class="prop">Content</span> <span class="punc">=</span> <span class="str">"A modern, fully-featured Roblox UI framework. Open-source and free."</span><span class="punc">,</span>
+<span class="punc">})</span></code></pre>
+    </div>
+  </div>
+
+  <hr class="divider"/>
+
+  <!-- ═══ NOTIFICATIONS ═══ -->
+  <div class="section" id="notifications">
+    <div class="section-header">
+      <div class="section-eyebrow">Systems</div>
+      <h2>Notifications</h2>
+      <p>Stack notifications in the corner. Swipe to dismiss on mobile. 4 notification types with optional custom icon.</p>
+    </div>
+
+    <div class="notif-types">
+      <div class="notif-item success"><span style="color:#4ecdc4;font-size:18px;">✓</span><div><div class="notif-title" style="color:#4ecdc4;">Success</div><div class="notif-content">Operation completed successfully.</div></div></div>
+      <div class="notif-item warn"><span style="color:#ffd166;font-size:18px;">⚠</span><div><div class="notif-title" style="color:#ffd166;">Warning</div><div class="notif-content">This action might have side effects.</div></div></div>
+      <div class="notif-item error"><span style="color:#ef476f;font-size:18px;">✕</span><div><div class="notif-title" style="color:#ef476f;">Error</div><div class="notif-content">Something went wrong.</div></div></div>
+      <div class="notif-item info"><span style="color:#6eaaff;font-size:18px;">ℹ</span><div><div class="notif-title" style="color:#6eaaff;">Info</div><div class="notif-content">Here's something you should know.</div></div></div>
+    </div>
+
+    <div class="code-wrap" style="margin-top:20px;">
+      <div class="code-header"><div class="code-dots"><div class="code-dot"></div><div class="code-dot"></div><div class="code-dot"></div></div><span class="code-lang">lua</span><button class="code-copy" onclick="copyCode(this)">Copy</button></div>
+      <pre><code><span class="fn">Mixusfield</span><span class="punc">:</span><span class="fn">Notify</span><span class="punc">({</span>
+    <span class="prop">Title</span>    <span class="punc">=</span> <span class="str">"Done!"</span><span class="punc">,</span>
+    <span class="prop">Content</span>  <span class="punc">=</span> <span class="str">"Script executed successfully."</span><span class="punc">,</span>
+    <span class="prop">Type</span>     <span class="punc">=</span> <span class="str">"success"</span><span class="punc">,</span>  <span class="cmt">-- "success" | "warning" | "error" | "info"</span>
+    <span class="prop">Duration</span> <span class="punc">=</span> <span class="num">4</span><span class="punc">,</span>           <span class="cmt">-- seconds (optional, default 4)</span>
+    <span class="prop">Icon</span>     <span class="punc">=</span> <span class="punc">{</span> <span class="prop">Type</span><span class="punc">=</span><span class="str">"Lucide"</span><span class="punc">,</span> <span class="prop">Source</span><span class="punc">=</span><span class="str">"check"</span> <span class="punc">},</span>  <span class="cmt">-- optional</span>
+<span class="punc">})</span></code></pre>
+    </div>
+  </div>
+
+  <!-- ═══ ALERTS ═══ -->
+  <div class="section" id="alerts">
+    <div class="section-header">
+      <div class="section-eyebrow">Systems</div>
+      <h2>Alert / Confirm Dialogs</h2>
+      <p>Modal dialogs for warnings and confirmations. Blocks the UI until dismissed.</p>
+    </div>
+
+    <div class="code-wrap">
+      <div class="code-header"><div class="code-dots"><div class="code-dot"></div><div class="code-dot"></div><div class="code-dot"></div></div><span class="code-lang">lua</span><button class="code-copy" onclick="copyCode(this)">Copy</button></div>
+      <pre><code><span class="cmt">-- Simple alert</span>
+<span class="fn">Mixusfield</span><span class="punc">:</span><span class="fn">Alert</span><span class="punc">({</span>
+    <span class="prop">Title</span>   <span class="punc">=</span> <span class="str">"Notice"</span><span class="punc">,</span>
+    <span class="prop">Content</span> <span class="punc">=</span> <span class="str">"Please read the rules before continuing."</span><span class="punc">,</span>
+    <span class="prop">Type</span>    <span class="punc">=</span> <span class="str">"info"</span><span class="punc">,</span>
+<span class="punc">})</span>
+
+<span class="cmt">-- Confirm dialog with callbacks</span>
+<span class="fn">Mixusfield</span><span class="punc">:</span><span class="fn">Alert</span><span class="punc">({</span>
+    <span class="prop">Title</span>     <span class="punc">=</span> <span class="str">"Reset Settings"</span><span class="punc">,</span>
+    <span class="prop">Content</span>   <span class="punc">=</span> <span class="str">"This will reset all settings. Are you sure?"</span><span class="punc">,</span>
+    <span class="prop">Type</span>      <span class="punc">=</span> <span class="str">"warning"</span><span class="punc">,</span>
+    <span class="prop">Confirm</span>   <span class="punc">=</span> <span class="str">"Reset"</span><span class="punc">,</span>
+    <span class="prop">Cancel</span>    <span class="punc">=</span> <span class="str">"Cancel"</span><span class="punc">,</span>
+    <span class="prop">OnConfirm</span> <span class="punc">=</span> <span class="kw">function</span><span class="punc">()</span>
+        <span class="fn">Mixusfield</span><span class="punc">:</span><span class="fn">Notify</span><span class="punc">({</span> <span class="prop">Title</span><span class="punc">=</span><span class="str">"Reset"</span><span class="punc">,</span> <span class="prop">Content</span><span class="punc">=</span><span class="str">"Settings cleared."</span><span class="punc">,</span> <span class="prop">Type</span><span class="punc">=</span><span class="str">"info"</span> <span class="punc">})</span>
+    <span class="kw">end</span><span class="punc">,</span>
+    <span class="prop">OnCancel</span>  <span class="punc">=</span> <span class="kw">function</span><span class="punc">()</span>
+        <span class="fn">print</span><span class="punc">(</span><span class="str">"Cancelled."</span><span class="punc">)</span>
+    <span class="kw">end</span><span class="punc">,</span>
+<span class="punc">})</span></code></pre>
+    </div>
+
+    <table class="param-table">
+      <thead><tr><th>Parameter</th><th>Type</th><th>Description</th></tr></thead>
+      <tbody>
+        <tr><td>Type<span class="opt-badge">opt</span></td><td>string</td><td><code>"info"</code> <code>"warning"</code> <code>"error"</code> <code>"success"</code></td></tr>
+        <tr><td>Confirm<span class="opt-badge">opt</span></td><td>string</td><td>Label for the confirm button. If absent, only a dismiss button shows.</td></tr>
+        <tr><td>Cancel<span class="opt-badge">opt</span></td><td>string</td><td>Label for the cancel button.</td></tr>
+        <tr><td>OnConfirm<span class="opt-badge">opt</span></td><td>function</td><td>Fires when user confirms.</td></tr>
+        <tr><td>OnCancel<span class="opt-badge">opt</span></td><td>function</td><td>Fires when user cancels or closes.</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- ═══ KEY SYSTEM ═══ -->
+  <div class="section" id="keysystem">
+    <div class="section-header">
+      <div class="section-eyebrow">Systems</div>
+      <h2>Key System</h2>
+      <p>Gate your UI behind a key. Supports saving the key to <code>DataStore</code> and multiple gateway links.</p>
+    </div>
+
+    <div class="code-wrap">
+      <div class="code-header"><div class="code-dots"><div class="code-dot"></div><div class="code-dot"></div><div class="code-dot"></div></div><span class="code-lang">lua</span><button class="code-copy" onclick="copyCode(this)">Copy</button></div>
+      <pre><code><span class="kw">local</span> <span class="fn">Window</span> <span class="punc">=</span> <span class="fn">Mixusfield</span><span class="punc">:</span><span class="fn">CreateWindow</span><span class="punc">({</span>
+    <span class="prop">Name</span>      <span class="punc">=</span> <span class="str">"My Script"</span><span class="punc">,</span>
+    <span class="prop">KeySystem</span> <span class="punc">=</span> <span class="punc">{</span>
+        <span class="prop">Title</span>    <span class="punc">=</span> <span class="str">"Key Required"</span><span class="punc">,</span>
+        <span class="prop">Key</span>      <span class="punc">=</span> <span class="str">"FREE_2025"</span><span class="punc">,</span>
+        <span class="prop">SaveKey</span>  <span class="punc">=</span> <span class="kw">true</span><span class="punc">,</span>       <span class="cmt">-- remember valid key across sessions</span>
+        <span class="prop">Gateways</span> <span class="punc">=</span> <span class="punc">{</span>
+            <span class="punc">{</span> <span class="prop">Name</span><span class="punc">=</span><span class="str">"Get Key"</span><span class="punc">,</span>     <span class="prop">URL</span><span class="punc">=</span><span class="str">"https://linkvertise.com/..."</span> <span class="punc">},</span>
+            <span class="punc">{</span> <span class="prop">Name</span><span class="punc">=</span><span class="str">"Backup Link"</span><span class="punc">,</span> <span class="prop">URL</span><span class="punc">=</span><span class="str">"https://loot-link.com/..."</span>    <span class="punc">},</span>
+        <span class="punc">},</span>
+    <span class="punc">},</span>
+<span class="punc">})</span></code></pre>
+    </div>
+
+    <div class="callout tip">
+      <span class="callout-icon">✓</span>
+      <div class="callout-body">
+        <strong>SaveKey = true</strong>
+        When enabled, a validated key is saved so the user only needs to enter it once. Subsequent loads skip the key screen automatically.
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ SEARCH ═══ -->
+  <div class="section" id="search">
+    <div class="section-header">
+      <div class="section-eyebrow">Systems</div>
+      <h2>Search / Filter</h2>
+      <p>Mixusfield has a built-in search bar. Components registered in the search registry appear in real-time filter results.</p>
+    </div>
+
+    <div class="callout info">
+      <span class="callout-icon">ℹ</span>
+      <div class="callout-body">
+        <strong>Automatic</strong>
+        All components are automatically registered in the search system. No extra code is needed — the search bar appears in the window header by default.
+      </div>
+    </div>
+  </div>
+
+  <hr class="divider"/>
+
+  <!-- ═══ FRAMEWORK API ═══ -->
+  <div class="section" id="framework-api">
+    <div class="section-header">
+      <div class="section-eyebrow">API Reference</div>
+      <h2>Framework API</h2>
+      <p>Top-level methods on the <code>Mixusfield</code> object.</p>
+    </div>
+
+    <div class="api-block">
+      <div class="api-sig"><span class="api-method">Mixusfield:CreateWindow</span><span style="color:var(--textmuted)">(config: table)</span><span class="api-returns">→ Window</span></div>
+      <div class="api-desc">Creates and returns a new window. See <a href="#window" style="color:var(--accent)">Window</a> section for all config options.</div>
+    </div>
+
+    <div class="api-block">
+      <div class="api-sig"><span class="api-method">Mixusfield:Notify</span><span style="color:var(--textmuted)">(config: table)</span></div>
+      <div class="api-desc">Sends a notification. Fields: <code>Title</code>, <code>Content</code>, <code>Type</code> (<code>"success"</code>/<code>"warning"</code>/<code>"error"</code>/<code>"info"</code>), <code>Duration</code>, <code>Icon</code>.</div>
+    </div>
+
+    <div class="api-block">
+      <div class="api-sig"><span class="api-method">Mixusfield:Alert</span><span style="color:var(--textmuted)">(config: table)</span></div>
+      <div class="api-desc">Shows a modal dialog. See <a href="#alerts" style="color:var(--accent)">Alerts</a> section for options.</div>
+    </div>
+
+    <div class="api-block">
+      <div class="api-sig"><span class="api-method">Mixusfield:SetTheme</span><span style="color:var(--textmuted)">(name: string)</span></div>
+      <div class="api-desc">Switches the active theme live. Valid values: <code>"Dark"</code> <code>"Light"</code> <code>"AMOLED"</code> <code>"Midnight"</code> <code>"Rose"</code> <code>"Ocean"</code>.</div>
+    </div>
+
+    <div class="api-block">
+      <div class="api-sig"><span class="api-method">Mixusfield:Destroy</span><span style="color:var(--textmuted)">()</span></div>
+      <div class="api-desc">Destroys all windows, cleans up all connections and GUI instances. Call this when unloading your script.</div>
+    </div>
+  </div>
+
+  <!-- ═══ WINDOW API ═══ -->
+  <div class="section" id="window-api">
+    <div class="section-header">
+      <div class="section-eyebrow">API Reference</div>
+      <h2>Window API</h2>
+      <p>Methods on the <code>Window</code> object returned by <code>CreateWindow</code>.</p>
+    </div>
+
+    <div class="api-block">
+      <div class="api-sig"><span class="api-method">Window:CreateTab</span><span style="color:var(--textmuted)">(config: table)</span><span class="api-returns">→ Tab</span></div>
+      <div class="api-desc">Creates a tab. Receives <code>Name</code> and optional <code>Icon</code>.</div>
+    </div>
+    <div class="api-block">
+      <div class="api-sig"><span class="api-method">Window:Show</span><span style="color:var(--textmuted)">() / </span><span class="api-method">Window:Hide</span><span style="color:var(--textmuted)">()</span></div>
+      <div class="api-desc">Show or hide the window with a tween animation.</div>
+    </div>
+    <div class="api-block">
+      <div class="api-sig"><span class="api-method">Window:Toggle</span><span style="color:var(--textmuted)">()</span></div>
+      <div class="api-desc">Toggle visibility.</div>
+    </div>
+    <div class="api-block">
+      <div class="api-sig"><span class="api-method">Window:Minimize</span><span style="color:var(--textmuted)">() / </span><span class="api-method">Window:Restore</span><span style="color:var(--textmuted)">()</span></div>
+      <div class="api-desc">Minimize to top bar or restore to full size.</div>
+    </div>
+    <div class="api-block">
+      <div class="api-sig"><span class="api-method">Window:Notify</span><span style="color:var(--textmuted)">(config: table)</span></div>
+      <div class="api-desc">Same as <code>Mixusfield:Notify</code> but scoped to this window.</div>
+    </div>
+    <div class="api-block">
+      <div class="api-sig"><span class="api-method">Window:Destroy</span><span style="color:var(--textmuted)">()</span></div>
+      <div class="api-desc">Destroys only this window and cleans up its connections.</div>
+    </div>
+  </div>
+
+  <!-- ═══ COMPONENT API QUICK REFERENCE ═══ -->
+  <div class="section">
+    <div class="section-eyebrow">API Reference</div>
+    <h2 style="font-family:var(--font-head);font-size:26px;font-weight:800;letter-spacing:-0.5px;margin-bottom:20px;">Component API Cheatsheet</h2>
+
+    <div class="code-wrap">
+      <div class="code-header"><div class="code-dots"><div class="code-dot"></div><div class="code-dot"></div><div class="code-dot"></div></div><span class="code-lang">lua — all component methods</span><button class="code-copy" onclick="copyCode(this)">Copy</button></div>
+      <pre><code><span class="cmt">-- Toggle</span>
+toggle<span class="punc">:</span><span class="fn">Set</span><span class="punc">(</span><span class="kw">true</span><span class="punc">)</span>           toggle<span class="punc">:</span><span class="fn">Get</span><span class="punc">()</span>  <span class="cmt">-- → bool</span>
+
+<span class="cmt">-- Slider</span>
+slider<span class="punc">:</span><span class="fn">Set</span><span class="punc">(</span><span class="num">100</span><span class="punc">)</span>            slider<span class="punc">:</span><span class="fn">Get</span><span class="punc">()</span>  <span class="cmt">-- → number</span>
+
+<span class="cmt">-- Dropdown</span>
+dd<span class="punc">:</span><span class="fn">Set</span><span class="punc">(</span><span class="str">"Creative"</span><span class="punc">)</span>        dd<span class="punc">:</span><span class="fn">Get</span><span class="punc">()</span>     <span class="cmt">-- → string</span>
+dd<span class="punc">:</span><span class="fn">Refresh</span><span class="punc">({</span> <span class="str">"A"</span><span class="punc">,</span> <span class="str">"B"</span> <span class="punc">})</span>  <span class="cmt">-- replace option list</span>
+
+<span class="cmt">-- Textbox</span>
+tb<span class="punc">:</span><span class="fn">Set</span><span class="punc">(</span><span class="str">"hello"</span><span class="punc">)</span>           tb<span class="punc">:</span><span class="fn">Get</span><span class="punc">()</span>     <span class="cmt">-- → string</span>
+
+<span class="cmt">-- Keybind</span>
+kb<span class="punc">:</span><span class="fn">Set</span><span class="punc">(</span><span class="fn">Enum</span><span class="punc">.</span><span class="fn">KeyCode</span><span class="punc">.</span><span class="prop">F</span><span class="punc">)</span>   kb<span class="punc">:</span><span class="fn">Get</span><span class="punc">()</span>     <span class="cmt">-- → KeyCode</span>
+
+<span class="cmt">-- ColorPicker</span>
+cp<span class="punc">:</span><span class="fn">Set</span><span class="punc">(</span><span class="fn">Color3</span><span class="punc">.</span><span class="fn">new</span><span class="punc">(</span><span class="num">1</span><span class="punc">,</span><span class="num">0</span><span class="punc">,</span><span class="num">0</span><span class="punc">))</span>  cp<span class="punc">:</span><span class="fn">Get</span><span class="punc">()</span>     <span class="cmt">-- → Color3</span>
+
+<span class="cmt">-- ProgressBar</span>
+pb<span class="punc">:</span><span class="fn">Set</span><span class="punc">(</span><span class="num">75</span><span class="punc">)</span>                pb<span class="punc">:</span><span class="fn">Get</span><span class="punc">()</span>     <span class="cmt">-- → number (0–100)</span>
+
+<span class="cmt">-- RadioGroup</span>
+rg<span class="punc">:</span><span class="fn">Set</span><span class="punc">(</span><span class="str">"Ultra"</span><span class="punc">)</span>           rg<span class="punc">:</span><span class="fn">Get</span><span class="punc">()</span>     <span class="cmt">-- → string</span></code></pre>
+    </div>
+  </div>
+
+</main>
+</div>
+
+<footer>
+  <span>Mixusfield v2.0.0 · <a href="https://github.com/LumeCraftors01/Mixusfield" target="_blank">GitHub</a></span>
+  <span>Made with ✦ for the Roblox community</span>
+</footer>
+
+<script>
+// ── COPY CODE ──────────────────────────────────────
+function copyCode(btn) {
+  const pre = btn.closest('.code-wrap').querySelector('pre');
+  const text = pre.innerText;
+  navigator.clipboard.writeText(text).then(() => {
+    btn.textContent = 'Copied!';
+    btn.classList.add('copied');
+    setTimeout(() => { btn.textContent = 'Copy'; btn.classList.remove('copied'); }, 1800);
+  });
+}
+
+// ── SIDEBAR MOBILE ─────────────────────────────────
+function openSidebar() {
+  document.getElementById('sidebar').classList.add('open');
+  document.getElementById('overlay').classList.add('show');
+}
+function closeSidebar() {
+  document.getElementById('sidebar').classList.remove('open');
+  document.getElementById('overlay').classList.remove('show');
+}
+
+// ── ACTIVE NAV LINK ────────────────────────────────
+const sections = document.querySelectorAll('.section, .hero');
+const navLinks  = document.querySelectorAll('nav a');
+
+const observer = new IntersectionObserver(entries => {
+  entries.forEach(e => {
+    if (e.isIntersecting) {
+      navLinks.forEach(a => a.classList.remove('active'));
+      const id = e.target.id;
+      const link = document.querySelector(`nav a[href="#${id}"]`);
+      if (link) link.classList.add('active');
+    }
+  });
+}, { rootMargin: '-30% 0px -60% 0px' });
+
+sections.forEach(s => { if (s.id) observer.observe(s); });
+
+// Close sidebar on nav link click (mobile)
+navLinks.forEach(a => a.addEventListener('click', closeSidebar));
+
+// ── SEARCH FILTER ──────────────────────────────────
+function filterSearch() {
+  const q = document.getElementById('searchInput').value.toLowerCase().trim();
+  if (!q) { navLinks.forEach(a => a.style.display = ''); return; }
+  navLinks.forEach(a => {
+    const text = a.textContent.toLowerCase();
+    a.style.display = text.includes(q) ? '' : 'none';
+  });
+}
+</script>
+</body>
+</html>
