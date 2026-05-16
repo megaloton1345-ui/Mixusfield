@@ -1203,43 +1203,59 @@ end
 
 local KeySystem = {}
 
-function KeySystem:Create(screenGui, config, callback)
-    config   = config or {}
-    callback = callback or function() end
-    local theme     = Themes:Current()
-    local title     = config.Title   or "Key System"
-    local gateways  = config.Gateways or {}
-    local savedKey  = config.SaveKey  and SaveSystem:Get("MixusfieldKey", "") or ""
-    local note      = config.Note    or "Enter your key to continue."
+-- KeySystem:Create now accepts an onSuccess callback called only when key is valid
+function KeySystem:Create(screenGui, config, callback, onSuccess)
+    config    = config    or {}
+    callback  = callback  or function() return true end
+    onSuccess = onSuccess or function() end
+
+    local theme    = Themes:Current()
+    local title    = config.Title    or "Key System"
+    local gateways = config.Gateways or {}
+    local savedKey = config.SaveKey and SaveSystem:Get("MixusfieldKey", "") or ""
+    local note     = config.Note    or "Enter your key to continue."
+
+    -- If a valid key is already saved, skip the UI entirely and call onSuccess immediately
+    if savedKey ~= "" and callback(savedKey) ~= false then
+        onSuccess()
+        return
+    end
 
     -- Overlay
     local overlay = Util.Create("Frame", {
+        Name             = "KeyOverlay",
         Size             = UDim2.new(1, 0, 1, 0),
-        BackgroundColor3 = Color3.fromRGB(0,0,0),
-        BackgroundTransparency = 0.4,
+        BackgroundColor3 = Color3.fromRGB(0, 0, 0),
+        BackgroundTransparency = 1,
         ZIndex           = 400,
     }, screenGui)
+
+    -- Animate overlay in
+    Util.Tween(overlay, Util.TI(0.3), { BackgroundTransparency = 0.45 })
 
     -- Window
     local win = Util.Create("Frame", {
         Name             = "KeyWindow",
-        Size             = UDim2.new(0, 400, 0, 340),
-        Position         = UDim2.new(0.5, -200, 0.5, -170),
+        Size             = UDim2.new(0, 420, 0, 360),
+        Position         = UDim2.new(0.5, -210, 0.6, -180),
         BackgroundColor3 = theme.Surface,
+        BackgroundTransparency = 1,
         ZIndex           = 401,
+        ClipsDescendants = false,
     }, screenGui)
     Util.Corner(win, 16)
     Util.Stroke(win, theme.Border, 1, 0.5)
 
     -- Topbar
     local topbar = Util.Create("Frame", {
-        Size             = UDim2.new(1, 0, 0, 44),
+        Size             = UDim2.new(1, 0, 0, 46),
         BackgroundColor3 = theme.TopbarBg,
         ZIndex           = 402,
+        ClipsDescendants = false,
     }, win)
     Util.Corner(topbar, 16)
-
-    local topbarFix = Util.Create("Frame", {
+    -- Fill bottom corners of topbar
+    Util.Create("Frame", {
         Size             = UDim2.new(1, 0, 0.5, 0),
         Position         = UDim2.new(0, 0, 0.5, 0),
         BackgroundColor3 = theme.TopbarBg,
@@ -1250,7 +1266,7 @@ function KeySystem:Create(screenGui, config, callback)
         Size             = UDim2.new(1, -80, 1, 0),
         Position         = UDim2.new(0, 14, 0, 0),
         BackgroundTransparency = 1,
-        Text             = title,
+        Text             = "🔑  " .. title,
         TextColor3       = theme.Text,
         Font             = Enum.Font.GothamBold,
         TextSize         = 14,
@@ -1258,40 +1274,38 @@ function KeySystem:Create(screenGui, config, callback)
         ZIndex           = 403,
     }, topbar)
 
-    -- Close button
+    -- Close button (just closes key window without unlocking)
     local closeBtn = Util.Create("TextButton", {
         Size             = UDim2.new(0, 28, 0, 28),
-        Position         = UDim2.new(1, -36, 0.5, -14),
+        Position         = UDim2.new(1, -38, 0.5, -14),
         BackgroundColor3 = Color3.fromRGB(200, 60, 60),
         Text             = "✕",
-        TextColor3       = Color3.fromRGB(255,255,255),
+        TextColor3       = Color3.fromRGB(255, 255, 255),
         Font             = Enum.Font.GothamBold,
         TextSize         = 12,
-        ZIndex           = 403,
+        ZIndex           = 404,
     }, topbar)
     Util.Corner(closeBtn, 8)
     closeBtn.MouseButton1Click:Connect(function()
-        win:Destroy(); overlay:Destroy()
+        Util.Tween(win,     Util.TI(0.25), { BackgroundTransparency = 1 }).Completed:Connect(function() win:Destroy() end)
+        Util.Tween(overlay, Util.TI(0.25), { BackgroundTransparency = 1 }).Completed:Connect(function() overlay:Destroy() end)
     end)
-    closeBtn.MouseEnter:Connect(function()
-        Util.Tween(closeBtn, Util.TI(0.15), { BackgroundColor3 = Color3.fromRGB(255, 80, 80) })
-    end)
-    closeBtn.MouseLeave:Connect(function()
-        Util.Tween(closeBtn, Util.TI(0.15), { BackgroundColor3 = Color3.fromRGB(200, 60, 60) })
-    end)
+    closeBtn.MouseEnter:Connect(function() Util.Tween(closeBtn, Util.TI(0.15), { BackgroundColor3 = Color3.fromRGB(255, 80, 80) }) end)
+    closeBtn.MouseLeave:Connect(function() Util.Tween(closeBtn, Util.TI(0.15), { BackgroundColor3 = Color3.fromRGB(200, 60, 60) }) end)
 
     -- Body
     local body = Util.Create("Frame", {
-        Size             = UDim2.new(1, 0, 1, -44),
-        Position         = UDim2.new(0, 0, 0, 44),
+        Size             = UDim2.new(1, 0, 1, -46),
+        Position         = UDim2.new(0, 0, 0, 46),
         BackgroundTransparency = 1,
         ZIndex           = 402,
+        ClipsDescendants = false,
     }, win)
     Util.Pad(body, 18, 18, 18, 18)
     Util.List(body, Enum.FillDirection.Vertical, 10)
 
-    -- Note
-    local noteLbl = Util.Create("TextLabel", {
+    -- Note label
+    Util.Create("TextLabel", {
         Size             = UDim2.new(1, 0, 0, 0),
         AutomaticSize    = Enum.AutomaticSize.Y,
         BackgroundTransparency = 1,
@@ -1302,45 +1316,52 @@ function KeySystem:Create(screenGui, config, callback)
         TextXAlignment   = Enum.TextXAlignment.Left,
         TextWrapped      = true,
         ZIndex           = 403,
+        LayoutOrder      = 0,
     }, body)
 
     -- Gateway cards
-    for _, gw in ipairs(gateways) do
+    for i, gw in ipairs(gateways) do
         local gwBtn = Util.Create("TextButton", {
             Size             = UDim2.new(1, 0, 0, 36),
             BackgroundColor3 = theme.SurfaceAlt,
-            Text             = "Open: " .. (gw.Name or "Gateway"),
+            Text             = "🔗  Open: " .. (gw.Name or "Gateway"),
             TextColor3       = theme.Accent,
             Font             = Enum.Font.GothamSemibold,
             TextSize         = 12,
             ZIndex           = 403,
+            LayoutOrder      = i,
         }, body)
         Util.Corner(gwBtn, 8)
         gwBtn.MouseButton1Click:Connect(function()
             if gw.URL then
-                -- setclipboard / open link depending on environment
-                if setclipboard then setclipboard(gw.URL) end
-                NotifSystem:Push({ Title = "Link Copied", Content = gw.URL, Type = "info" })
+                pcall(function()
+                    if syn and syn.open_url then syn.open_url(gw.URL)
+                    elseif setclipboard then setclipboard(gw.URL) end
+                end)
+                NotifSystem:Push({ Title = "Link Copied", Content = "URL copied to clipboard.", Type = "info" })
             end
         end)
+        gwBtn.MouseEnter:Connect(function() Util.Tween(gwBtn, Util.TI(0.15), { BackgroundColor3 = theme.Surface }) end)
+        gwBtn.MouseLeave:Connect(function() Util.Tween(gwBtn, Util.TI(0.15), { BackgroundColor3 = theme.SurfaceAlt }) end)
     end
 
-    -- Key input
+    -- Key input frame
     local inputFrame = Util.Create("Frame", {
-        Size             = UDim2.new(1, 0, 0, 38),
+        Size             = UDim2.new(1, 0, 0, 40),
         BackgroundColor3 = theme.SurfaceAlt,
         ZIndex           = 403,
+        LayoutOrder      = #gateways + 1,
     }, body)
     Util.Corner(inputFrame, 8)
-    Util.Stroke(inputFrame, theme.Border, 1, 0.6)
+    local inputStroke = Util.Stroke(inputFrame, theme.Border, 1, 0.6)
 
     local keyInput = Util.Create("TextBox", {
         Size             = UDim2.new(1, -20, 1, 0),
         Position         = UDim2.new(0, 10, 0, 0),
         BackgroundTransparency = 1,
-        PlaceholderText  = "Enter key...",
+        PlaceholderText  = "Enter your key here...",
         PlaceholderColor3 = theme.TextMuted,
-        Text             = savedKey,
+        Text             = "",
         TextColor3       = theme.Text,
         Font             = Enum.Font.Gotham,
         TextSize         = 13,
@@ -1349,84 +1370,131 @@ function KeySystem:Create(screenGui, config, callback)
     }, inputFrame)
 
     keyInput.Focused:Connect(function()
-        Util.Tween(inputFrame, Util.TI(0.2), { BackgroundColor3 = theme.Surface })
-        Anim.GlowColor(Util.Stroke(inputFrame, theme.Accent, 1.5, 0.3), theme.Accent, 0.2)
+        Util.Tween(inputFrame,  Util.TI(0.2), { BackgroundColor3 = theme.Surface })
+        Util.Tween(inputStroke, Util.TI(0.2), { Color = theme.Accent, Transparency = 0.2, Thickness = 1.5 })
     end)
     keyInput.FocusLost:Connect(function()
-        Util.Tween(inputFrame, Util.TI(0.2), { BackgroundColor3 = theme.SurfaceAlt })
+        Util.Tween(inputFrame,  Util.TI(0.2), { BackgroundColor3 = theme.SurfaceAlt })
+        Util.Tween(inputStroke, Util.TI(0.2), { Color = theme.Border, Transparency = 0.6, Thickness = 1 })
     end)
+
+    -- Status label (shows Invalid / Valid feedback)
+    local statusLbl = Util.Create("TextLabel", {
+        Size             = UDim2.new(1, 0, 0, 18),
+        BackgroundTransparency = 1,
+        Text             = "",
+        TextColor3       = theme.Danger,
+        Font             = Enum.Font.GothamSemibold,
+        TextSize         = 11,
+        TextXAlignment   = Enum.TextXAlignment.Left,
+        ZIndex           = 403,
+        LayoutOrder      = #gateways + 2,
+    }, body)
 
     -- Buttons row
     local btnRow = Util.Create("Frame", {
         Size             = UDim2.new(1, 0, 0, 38),
         BackgroundTransparency = 1,
         ZIndex           = 403,
+        LayoutOrder      = #gateways + 3,
     }, body)
     Util.List(btnRow, Enum.FillDirection.Horizontal, 8)
 
-    local function makeBtn(text, color, fn)
+    local submitting = false
+
+    local function makeKeyBtn(text, color, lo, fn)
         local btn = Util.Create("TextButton", {
             Size             = UDim2.new(0.5, -4, 1, 0),
             BackgroundColor3 = color,
             Text             = text,
-            TextColor3       = Color3.fromRGB(255,255,255),
+            TextColor3       = Color3.fromRGB(255, 255, 255),
             Font             = Enum.Font.GothamSemibold,
             TextSize         = 13,
             ZIndex           = 404,
+            LayoutOrder      = lo,
         }, btnRow)
         Util.Corner(btn, 8)
         btn.MouseButton1Click:Connect(fn)
-        btn.MouseEnter:Connect(function()
-            Util.Tween(btn, Util.TI(0.15), { BackgroundColor3 = Util.LerpColor(color, Color3.fromRGB(255,255,255), 0.12) })
-        end)
-        btn.MouseLeave:Connect(function()
-            Util.Tween(btn, Util.TI(0.15), { BackgroundColor3 = color })
-        end)
+        btn.MouseEnter:Connect(function() Util.Tween(btn, Util.TI(0.15), { BackgroundColor3 = Util.LerpColor(color, Color3.fromRGB(255,255,255), 0.14) }) end)
+        btn.MouseLeave:Connect(function() Util.Tween(btn, Util.TI(0.15), { BackgroundColor3 = color }) end)
         return btn
     end
 
-    makeBtn("Paste", theme.SurfaceAlt, function()
+    -- Paste button
+    makeKeyBtn("📋  Paste", theme.SurfaceAlt, 1, function()
         if getclipboard then
-            keyInput.Text = getclipboard() or ""
+            local clip = getclipboard()
+            if clip and clip ~= "" then keyInput.Text = clip end
         end
     end)
 
-    makeBtn("Submit", theme.Accent, function()
+    -- Submit button
+    local submitBtn = makeKeyBtn("✓  Submit", theme.Accent, 2, function()
+        if submitting then return end
         local key = keyInput.Text
-        if config.SaveKey then
-            SaveSystem:Set("MixusfieldKey", key)
+        if key == "" then
+            statusLbl.Text = "⚠  Please enter a key first."
+            statusLbl.TextColor3 = theme.Warning
+            return
         end
-        local loading = Util.Create("Frame", {
+        submitting = true
+        statusLbl.Text = "⟳  Verifying..."
+        statusLbl.TextColor3 = theme.Info
+
+        -- Show verifying overlay on the key window
+        local loadOverlay = Util.Create("Frame", {
             Size             = UDim2.new(1, 0, 1, 0),
             BackgroundColor3 = theme.Surface,
-            BackgroundTransparency = 0.3,
+            BackgroundTransparency = 0.25,
             ZIndex           = 410,
         }, win)
+        Util.Corner(loadOverlay, 16)
         Util.Create("TextLabel", {
-            Size = UDim2.new(1, 0, 1, 0),
+            Size             = UDim2.new(1, 0, 1, 0),
             BackgroundTransparency = 1,
-            Text = "Verifying...",
-            TextColor3 = theme.Accent,
-            Font = Enum.Font.GothamBold,
-            TextSize = 14,
-            ZIndex = 411,
-        }, loading)
+            Text             = "⟳  Verifying Key...",
+            TextColor3       = theme.Accent,
+            Font             = Enum.Font.GothamBold,
+            TextSize         = 15,
+            ZIndex           = 411,
+        }, loadOverlay)
+
         task.delay(1.2, function()
-            loading:Destroy()
-            if callback(key) ~= false then
-                win:Destroy(); overlay:Destroy()
-                NotifSystem:Push({ Title = "Key Verified", Content = "Access granted.", Type = "success" })
+            submitting = false
+            loadOverlay:Destroy()
+            local valid = false
+            pcall(function() valid = callback(key) ~= false end)
+            if valid then
+                -- Save key if needed
+                if config.SaveKey then SaveSystem:Set("MixusfieldKey", key) end
+                -- Dismiss key UI
+                Util.Tween(win,     Util.TI(0.3, Enum.EasingStyle.Quint), { BackgroundTransparency = 1, Size = UDim2.new(0, 420, 0, 340) })
+                    .Completed:Connect(function() win:Destroy() end)
+                Util.Tween(overlay, Util.TI(0.3), { BackgroundTransparency = 1 })
+                    .Completed:Connect(function() overlay:Destroy() end)
+                task.delay(0.1, function()
+                    NotifSystem:Push({ Title = "✓ Key Verified", Content = "Access granted. Welcome!", Type = "success" })
+                    -- Call onSuccess to reveal main window
+                    onSuccess()
+                end)
             else
-                NotifSystem:Push({ Title = "Invalid Key", Content = "Please try again.", Type = "error" })
+                statusLbl.Text      = "✕  Invalid key. Please try again."
+                statusLbl.TextColor3 = theme.Danger
+                -- Shake animation on key input
+                local origPos = inputFrame.Position
+                for i = 1, 3 do
+                    task.delay(0.06 * (i - 1),     function() Util.Tween(inputFrame, Util.TI(0.05), { Position = UDim2.new(origPos.X.Scale, origPos.X.Offset + 6, origPos.Y.Scale, origPos.Y.Offset) }) end)
+                    task.delay(0.06 * (i - 1) + 0.05, function() Util.Tween(inputFrame, Util.TI(0.05), { Position = UDim2.new(origPos.X.Scale, origPos.X.Offset - 6, origPos.Y.Scale, origPos.Y.Offset) }) end)
+                end
+                task.delay(0.25, function() inputFrame.Position = origPos end)
+                NotifSystem:Push({ Title = "✕ Invalid Key", Content = "The key you entered is incorrect.", Type = "error" })
             end
         end)
     end)
 
-    -- Animate in
-    win.Position = UDim2.new(0.5, -200, 0.6, -170)
-    win.BackgroundTransparency = 1
+    -- Animate key window in
     Util.Tween(win, Util.TI(0.45, Enum.EasingStyle.Back), {
-        Position = UDim2.new(0.5, -200, 0.5, -170),
+        Position             = UDim2.new(0.5, -210, 0.5, -180),
         BackgroundTransparency = 0,
     })
 end
@@ -2480,8 +2548,9 @@ function Section.new(parent, config)
         ZIndex           = 10,
         LayoutOrder      = self.LayoutOrder,
         ClipsDescendants = false,
+        Visible          = true,
     }, parent)
-    Util.List(self.Frame, Enum.FillDirection.Vertical, 2)
+    Util.List(self.Frame, Enum.FillDirection.Vertical, 4)
 
     -- Header
     local headerH = Responsive:Scale(34)
@@ -2633,18 +2702,20 @@ function Tab.new(tabBar, contentArea, config)
     }, self.Button)
     Util.Corner(self.Indicator, 2)
 
-    -- Content page
+    -- Content page (scrollable, fills ContentArea)
     self.Page = Util.Create("ScrollingFrame", {
         Size                 = UDim2.new(1, 0, 1, 0),
         BackgroundTransparency = 1,
-        ScrollBarThickness   = 2,
+        BorderSizePixel      = 0,
+        ScrollBarThickness   = 3,
         ScrollBarImageColor3 = theme.Accent,
         CanvasSize           = UDim2.new(0, 0, 0, 0),
         AutomaticCanvasSize  = Enum.AutomaticSize.Y,
-        ZIndex               = 11,
+        ClipsDescendants     = true,
+        ZIndex               = 12,
         Visible              = false,
     }, contentArea)
-    Util.Pad(self.Page, 10, 10, 10, 10)
+    Util.Pad(self.Page, 12, 12, 12, 12)
     self.PageList = Util.List(self.Page, Enum.FillDirection.Vertical, 8)
 
     -- Click handler
@@ -2930,14 +3001,9 @@ function Window.new(screenGui, config)
         Position         = UDim2.new(0, sidebarW, 0, headerH),
         BackgroundColor3 = theme.Background,
         ZIndex           = 11,
-        ClipsDescendants = true,
+        ClipsDescendants = false,
     }, self.Frame)
     Util.Create("UICorner", { CornerRadius = UDim.new(0, 14) }, self.ContentArea)
-    Util.Create("Frame", {
-        Size             = UDim2.new(1, 0, 0, 14),
-        BackgroundColor3 = theme.Background,
-        ZIndex           = 11,
-    }, self.ContentArea)
 
     -- ── Dragging ──────────────────────────────────────────────────
     local dragging   = false
@@ -3046,16 +3112,18 @@ function Window:SetActiveTab(target)
 end
 
 function Window:Hide()
+    if not self.Visible then return end
+    local sz = self.Frame.Size
     Util.Tween(self.Frame, Util.TI(0.3, Enum.EasingStyle.Quint), {
         BackgroundTransparency = 1,
-        Size = UDim2.new(
-            self.Frame.Size.X.Scale, self.Frame.Size.X.Offset * 0.92,
-            self.Frame.Size.Y.Scale, self.Frame.Size.Y.Offset * 0.92
-        )
+        Size = UDim2.new(sz.X.Scale, sz.X.Offset * 0.90, sz.Y.Scale, sz.Y.Offset * 0.90),
     }).Completed:Connect(function()
-        self.Frame.Visible = false
+        if self.Frame then
+            self.Frame.Visible = false
+            self.Frame.Size = sz -- restore real size for next Show()
+        end
     end)
-    self.FloatBtn.Visible = true
+    if self.FloatBtn then self.FloatBtn.Visible = true end
     self.Visible = false
 end
 
@@ -3064,18 +3132,19 @@ function Window:Minimize()
 end
 
 function Window:Show()
+    if self.Visible then return end
     local origSz = Responsive:WindowSize()
     self.Frame.Visible = true
     self.Frame.BackgroundTransparency = 1
     self.Frame.Size = UDim2.new(
-        origSz.X.Scale, origSz.X.Offset * 0.92,
-        origSz.Y.Scale, origSz.Y.Offset * 0.92
+        origSz.X.Scale, origSz.X.Offset * 0.90,
+        origSz.Y.Scale, origSz.Y.Offset * 0.90
     )
-    Util.Tween(self.Frame, Util.TI(0.35, Enum.EasingStyle.Back), {
+    Util.Tween(self.Frame, Util.TI(0.38, Enum.EasingStyle.Back), {
         BackgroundTransparency = 0,
         Size = origSz,
     })
-    self.FloatBtn.Visible = false
+    if self.FloatBtn then self.FloatBtn.Visible = false end
     self.Visible = true
 end
 
@@ -3126,22 +3195,55 @@ function MixusfieldAPI.Init(config)
     -- Init notification system
     NotifSystem:Init(screenGui)
 
-    -- Show startup popup
+    -- Create window but keep it hidden until popup + key are done
+    local win = Window.new(screenGui, {
+        Title = config.Title or "Mixusfield",
+    })
+    -- Hide immediately; it will be revealed by revealWindow()
+    win.Frame.Visible = false
+    win.FloatBtn.Visible = false
+
+    -- revealWindow: animate the main window in
+    local function revealWindow()
+        win.Frame.Visible = true
+        local origSz = Responsive:WindowSize()
+        win.Frame.BackgroundTransparency = 1
+        win.Frame.Size = UDim2.new(
+            origSz.X.Scale, origSz.X.Offset * 0.90,
+            origSz.Y.Scale, origSz.Y.Offset * 0.90
+        )
+        Util.Tween(win.Frame, Util.TI(0.4, Enum.EasingStyle.Back), {
+            BackgroundTransparency = 0,
+            Size = origSz,
+        })
+        win.Visible = true
+    end
+
+    -- Determine total delay before revealing window
+    local popupDuration = 0
+    if config.StartupPopup and config.StartupPopup.Enabled then
+        popupDuration = (config.StartupPopup.Duration or 4) + 0.5 -- +0.5 for fade out
+    end
+
     if config.StartupPopup then
-        task.delay(0.5, function()
+        task.delay(0.3, function()
             StartupPopup:Show(screenGui, config.StartupPopup)
         end)
     end
 
-    -- Key system
-    if config.KeySystem then
-        KeySystem:Create(screenGui, config.KeySystem, config.KeySystem.Callback or function() return true end)
-    end
-
-    -- Create window
-    local win = Window.new(screenGui, {
-        Title = config.Title or "Mixusfield",
-    })
+    -- After popup, handle key system or reveal directly
+    task.delay(popupDuration + 0.3, function()
+        if config.KeySystem then
+            KeySystem:Create(
+                screenGui,
+                config.KeySystem,
+                config.KeySystem.Callback or function() return true end,
+                revealWindow  -- only called when key is VALID
+            )
+        else
+            revealWindow()
+        end
+    end)
 
     -- Theme change listener: rebuild colors
     Themes:OnChange(function(t)
@@ -3205,7 +3307,7 @@ return {
     USAGE EXAMPLE
     ════════════════════════════════════════════════════════════════════
 
-    local MF = loadstring(game:HttpGet("YOUR_URL"))()
+    local MF = loadstring(game:HttpGet("https://raw.githubusercontent.com/megaloton1345-ui/Mixusfield/refs/heads/main/Mixusfield.lua.txt"))()
 
     local UI = MF.Init({
         Title = "My Hub",
