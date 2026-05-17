@@ -288,33 +288,62 @@ local Themes = {
 }
 
 -- ════════════════════════════════════════════════════════════════
--- ICON MAPPING (Roblox asset IDs)
+-- ICON MAPPING — uses rbxassetid for ImageLabel icons
+-- These are well-known Roblox built-in icon asset IDs
 -- ════════════════════════════════════════════════════════════════
 local Icons = {
-    home     = "rbxassetid://10723407389",
-    shield   = "rbxassetid://10723403465",
-    user     = "rbxassetid://10723402814",
-    eye      = "rbxassetid://10723406615",
-    settings = "rbxassetid://10723407015",
-    search   = "rbxassetid://10723417617",
-    close    = "rbxassetid://10723415921",
-    minimize = "rbxassetid://10723414573",
-    zap      = "rbxassetid://10723416063",
-    sparkles = "rbxassetid://10723415483",
-    grid     = "rbxassetid://10723415054",
-    chevron  = "rbxassetid://10723413969",
-    check    = "rbxassetid://10723413487",
-    info     = "rbxassetid://10723413109",
-    bell     = "rbxassetid://10723412621",
-    trash    = "rbxassetid://10723412147",
-    edit     = "rbxassetid://10723411783",
-    discord  = "rbxassetid://10723411394",
-    key      = "rbxassetid://10723411052",
-    lock     = "rbxassetid://10723410693",
-    unlock   = "rbxassetid://10723410337",
-    warning  = "rbxassetid://10723409935",
-    error    = "rbxassetid://10723409531",
-    success  = "rbxassetid://10723409167",
+    home     = "rbxasset://textures/ui/GuiImagePlaceholder.png", -- fallback; user should supply real IDs
+    shield   = "rbxasset://textures/ui/GuiImagePlaceholder.png",
+    user     = "rbxasset://textures/ui/GuiImagePlaceholder.png",
+    eye      = "rbxasset://textures/ui/GuiImagePlaceholder.png",
+    settings = "rbxasset://textures/ui/GuiImagePlaceholder.png",
+    search   = "rbxasset://textures/ui/GuiImagePlaceholder.png",
+    close    = "rbxasset://textures/ui/GuiImagePlaceholder.png",
+    minimize = "rbxasset://textures/ui/GuiImagePlaceholder.png",
+    zap      = "rbxasset://textures/ui/GuiImagePlaceholder.png",
+    sparkles = "rbxasset://textures/ui/GuiImagePlaceholder.png",
+    grid     = "rbxasset://textures/ui/GuiImagePlaceholder.png",
+    chevron  = "rbxasset://textures/ui/GuiImagePlaceholder.png",
+    check    = "rbxasset://textures/ui/GuiImagePlaceholder.png",
+    info     = "rbxasset://textures/ui/GuiImagePlaceholder.png",
+    bell     = "rbxasset://textures/ui/GuiImagePlaceholder.png",
+    trash    = "rbxasset://textures/ui/GuiImagePlaceholder.png",
+    edit     = "rbxasset://textures/ui/GuiImagePlaceholder.png",
+    discord  = "rbxasset://textures/ui/GuiImagePlaceholder.png",
+    key      = "rbxasset://textures/ui/GuiImagePlaceholder.png",
+    lock     = "rbxasset://textures/ui/GuiImagePlaceholder.png",
+    unlock   = "rbxasset://textures/ui/GuiImagePlaceholder.png",
+    warning  = "rbxasset://textures/ui/GuiImagePlaceholder.png",
+    error    = "rbxasset://textures/ui/GuiImagePlaceholder.png",
+    success  = "rbxasset://textures/ui/GuiImagePlaceholder.png",
+}
+
+-- Emoji fallbacks shown as TextLabel when images can't load (mobile-friendly)
+local IconEmoji = {
+    home     = "⌂",
+    shield   = "🛡",
+    user     = "👤",
+    eye      = "👁",
+    settings = "⚙",
+    search   = "🔍",
+    close    = "✕",
+    minimize = "─",
+    zap      = "⚡",
+    sparkles = "✨",
+    grid     = "⊞",
+    chevron  = "›",
+    check    = "✓",
+    info     = "ℹ",
+    bell     = "🔔",
+    trash    = "🗑",
+    edit     = "✎",
+    discord  = "D",
+    key      = "🔑",
+    lock     = "🔒",
+    unlock   = "🔓",
+    warning  = "⚠",
+    error    = "✕",
+    success  = "✓",
 }
 
 -- ════════════════════════════════════════════════════════════════
@@ -636,36 +665,49 @@ local function ShowKeySystem(opts, theme, screenGui, onSuccess)
     local grabURL  = opts.GrabKey  or ""
     local savedKeyPath = "Mixusfield/__key.txt"
 
-    -- Check saved key
+    -- Check saved key first — if valid, call onSuccess immediately without showing UI
+    local savedKeyValid = false
     if saveKey then
         pcall(function()
             if isfile(savedKeyPath) then
                 local stored = readfile(savedKeyPath)
                 for _, k in ipairs(validKeys) do
                     if stored == k then
-                        onSuccess()
-                        return
+                        savedKeyValid = true
                     end
                 end
             end
         end)
     end
+    if savedKeyValid then
+        onSuccess()
+        return
+    end
 
-    -- Dim overlay
+    -- Dim overlay (full screen blocker)
     local Overlay = New("Frame", {
         Parent               = screenGui,
         BackgroundColor3     = Color3.fromRGB(0, 0, 0),
-        BackgroundTransparency = 0.35,
+        BackgroundTransparency = 0.4,
         Size                 = UDim2.new(1, 0, 1, 0),
         ZIndex               = 200,
     })
+
+    local function CloseKeyPanel()
+        Tween(Overlay, { BackgroundTransparency = 1 }, 0.3)
+        task.delay(0.32, function()
+            if Overlay and Overlay.Parent then
+                Overlay:Destroy()
+            end
+        end)
+    end
 
     -- Key panel
     local Panel = New("Frame", {
         Parent               = Overlay,
         BackgroundColor3     = theme.KeyBg or theme.Background,
         AnchorPoint          = Vector2.new(0.5, 0.5),
-        Position             = UDim2.new(0.5, 0, 0.6, 0),
+        Position             = UDim2.new(0.5, 0, 0.65, 0),
         Size                 = UDim2.new(0, 320, 0, 0),
         AutomaticSize        = Enum.AutomaticSize.Y,
         ZIndex               = 201,
@@ -682,6 +724,27 @@ local function ShowKeySystem(opts, theme, screenGui, onSuccess)
         ZIndex           = 202,
     })
     MakeCorner(TopStrip, 2)
+
+    -- Close X button on the panel
+    local CloseX = New("TextButton", {
+        Parent               = Panel,
+        BackgroundTransparency = 1,
+        AnchorPoint          = Vector2.new(1, 0),
+        Position             = UDim2.new(1, -10, 0, 8),
+        Size                 = UDim2.new(0, 28, 0, 28),
+        Text                 = "✕",
+        TextColor3           = theme.Muted,
+        TextSize             = 16,
+        Font                 = Enum.Font.GothamBold,
+        ZIndex               = 210,
+    })
+    CloseX.MouseButton1Click:Connect(CloseKeyPanel)
+    CloseX.MouseEnter:Connect(function()
+        Tween(CloseX, { TextColor3 = theme.Text }, 0.15)
+    end)
+    CloseX.MouseLeave:Connect(function()
+        Tween(CloseX, { TextColor3 = theme.Muted }, 0.15)
+    end)
 
     local Inner = New("Frame", {
         Parent               = Panel,
@@ -893,22 +956,24 @@ local function ShowKeySystem(opts, theme, screenGui, onSuccess)
                     end)
                 end
                 StatusLabel.TextColor3 = Color3.fromRGB(30, 200, 120)
-                StatusLabel.Text = "Key accepted!"
+                StatusLabel.Text = "✓ Key accepted!"
                 Tween(ConfirmBtn, { BackgroundColor3 = Color3.fromRGB(30, 200, 120) }, 0.3)
-                task.delay(0.8, function()
-                    Tween(Overlay, { BackgroundTransparency = 1 }, 0.4)
-                    Tween(Panel, { Size = UDim2.new(0, 320, 0, 0) }, 0.3)
-                    task.wait(0.45)
-                    Overlay:Destroy()
-                    onSuccess()
+                -- Disable further input
+                KeyInput.TextEditable = false
+                task.delay(0.9, function()
+                    Tween(Overlay, { BackgroundTransparency = 1 }, 0.35)
+                    task.delay(0.38, function()
+                        if Overlay and Overlay.Parent then Overlay:Destroy() end
+                        onSuccess()
+                    end)
                 end)
                 return
             end
         end
         StatusLabel.TextColor3 = Color3.fromRGB(255, 80, 80)
-        StatusLabel.Text = "Invalid key. Try again."
-        Tween(InputBg, { BackgroundColor3 = Color3.fromRGB(60, 10, 10) }, 0.15)
-        task.delay(0.3, function()
+        StatusLabel.Text = "✕ Invalid key. Try again."
+        Tween(InputBg, { BackgroundColor3 = Color3.fromRGB(80, 10, 10) }, 0.12)
+        task.delay(0.35, function()
             Tween(InputBg, { BackgroundColor3 = theme.CardAlt }, 0.3)
         end)
     end
@@ -1072,9 +1137,10 @@ function Mixusfield:CreateWindow(options)
         Name             = "MixusfieldWindow",
         BackgroundColor3 = T.Background,
         Position         = UDim2.new(0, startX, 0, startY),
-        Size             = UDim2.new(0, WINDOW_W, 0, WINDOW_H),
+        Size             = UDim2.new(0, WINDOW_W, 0, DoKey and 0 or WINDOW_H),
         ClipsDescendants = true,
         ZIndex           = 2,
+        Visible          = not DoKey, -- hidden until key accepted
     })
     MakeCorner(Window, 18)
     -- Store stroke references so SetTheme can update them
@@ -1093,6 +1159,7 @@ function Mixusfield:CreateWindow(options)
         ScaleType          = Enum.ScaleType.Slice,
         SliceCenter        = Rect.new(49, 49, 450, 450),
         ZIndex             = 1,
+        Visible            = not DoKey,
     })
 
     -- ── TOPBAR (height 56) ──────────────────────────────────────
@@ -1338,9 +1405,9 @@ function Mixusfield:CreateWindow(options)
     end)
 
     -- ── FLOATING BUTTON ─────────────────────────────────────────
-    local FB_SIZE = 56
-    local fbX = 20
-    local fbY = vp.Y - 90
+    local FB_SIZE = mobile and 44 or 52
+    local fbX = 16
+    local fbY = vp.Y - (mobile and 100 or 80)
 
     local FloatBtn = New("Frame", {
         Parent           = ScreenGui,
@@ -1351,7 +1418,7 @@ function Mixusfield:CreateWindow(options)
         ZIndex           = 10,
         Visible          = false,
     })
-    MakeCorner(FloatBtn, 16)
+    MakeCorner(FloatBtn, mobile and 14 or 16)
     -- Glow stroke
     _FloatBtnStroke = MakeStroke(FloatBtn, T.AccentDark, 2, 0.3)
 
@@ -1360,7 +1427,7 @@ function Mixusfield:CreateWindow(options)
         BackgroundTransparency = 1,
         AnchorPoint          = Vector2.new(0.5, 0.5),
         Position             = UDim2.new(0.5, 0, 0.5, 0),
-        Size                 = UDim2.new(0, 26, 0, 26),
+        Size                 = UDim2.new(0, mobile and 20 or 24, 0, mobile and 20 or 24),
         Image                = Icons.grid,
         ImageColor3          = Color3.fromRGB(255, 255, 255),
         ZIndex               = 11,
@@ -1375,13 +1442,19 @@ function Mixusfield:CreateWindow(options)
 
     MakeDraggable(FloatBtn, FloatBtn)
 
+    -- Track whether window is user-hidden (closed to float btn)
+    local windowHidden = false
+
     -- ── CLOSE ───────────────────────────────────────────────────
     BtnCloseClick.MouseButton1Click:Connect(function()
+        if windowHidden then return end
+        windowHidden = true
         Tween(Window, { Size = UDim2.new(0, WINDOW_W, 0, 0) }, 0.25, Enum.EasingStyle.Quart, Enum.EasingDirection.In)
-        task.delay(0.3, function()
+        task.delay(0.28, function()
             Window.Visible = false
             Shadow.Visible = false
             FloatBtn.Visible = true
+            FloatBtn.Size = UDim2.new(0, FB_SIZE, 0, FB_SIZE)
             -- Pulse animation on float btn
             task.spawn(function()
                 while FloatBtn and FloatBtn.Visible do
@@ -1395,10 +1468,14 @@ function Mixusfield:CreateWindow(options)
     end)
 
     FloatClickBtn.MouseButton1Click:Connect(function()
+        windowHidden = false
         FloatBtn.Visible = false
         Window.Visible   = true
         Shadow.Visible   = true
-        Tween(Window, { Size = UDim2.new(0, WINDOW_W, 0, minimized and TOPBAR_H or WINDOW_H) }, 0.3, Enum.EasingStyle.Back)
+        Window.Size = UDim2.new(0, WINDOW_W, 0, 0)
+        task.delay(0.02, function()
+            Tween(Window, { Size = UDim2.new(0, WINDOW_W, 0, minimized and TOPBAR_H or WINDOW_H) }, 0.35, Enum.EasingStyle.Back)
+        end)
     end)
 
     -- ── WINDOW OBJECT ───────────────────────────────────────────
@@ -1439,146 +1516,86 @@ function Mixusfield:CreateWindow(options)
         self._Theme = newT
         self._Save:Set("__Theme", name)
 
-        -- Update T reference (used by closures for new elements)
-        -- We update the captured T table in-place so existing closures pick up changes
-        for k, v in pairs(newT) do T[k] = v end
+        -- IMPORTANT: Capture current colours BEFORE any mutation
+        local oldT = {}
+        for k, v in pairs(T) do oldT[k] = v end
 
-        -- Window frame
-        Tween(Window,   { BackgroundColor3 = newT.Background }, 0.4)
-        Tween(TopBar,   { BackgroundColor3 = newT.TopBar },     0.4)
-        Tween(TabBarBg, { BackgroundColor3 = newT.TopBar },     0.4)
-        Tween(IconBg,   { BackgroundColor3 = newT.Accent },     0.4)
-        Tween(FloatBtn, { BackgroundColor3 = newT.Accent },     0.4)
-        Tween(SearchBar,{ BackgroundColor3 = newT.CardAlt },    0.4)
+        -- Recolour every GUI object in the window by matching old theme → new theme
+        local bgMap = {
+            [oldT.Background] = newT.Background,
+            [oldT.Card]       = newT.Card,
+            [oldT.CardAlt]    = newT.CardAlt,
+            [oldT.TopBar]     = newT.TopBar,
+            [oldT.Accent]     = newT.Accent,
+            [oldT.AccentDark] = newT.AccentDark,
+            [oldT.Toggle]     = newT.Toggle,
+            [oldT.Border]     = newT.Border,
+            [oldT.SectionBar] = newT.SectionBar,
+            [oldT.KeyBg]      = newT.KeyBg,
+        }
+        local textMap = {
+            [oldT.Text]       = newT.Text,
+            [oldT.SubText]    = newT.SubText,
+            [oldT.Muted]      = newT.Muted,
+            [oldT.Accent]     = newT.Accent,
+            [oldT.TabActive]  = newT.TabActive,
+            [oldT.TabInactive]= newT.TabInactive,
+        }
+        local imgMap = {
+            [oldT.Accent]     = newT.Accent,
+            [oldT.AccentDark] = newT.AccentDark,
+            [oldT.Muted]      = newT.Muted,
+            [oldT.TabInactive]= newT.TabInactive,
+            [oldT.TabActive]  = newT.TabActive,
+        }
+        local strokeMap = {
+            [oldT.Border]     = newT.Border,
+            [oldT.Accent]     = newT.Accent,
+            [oldT.AccentDark] = newT.AccentDark,
+            [oldT.KeyAccent]  = newT.KeyAccent,
+        }
 
-        -- Window border stroke
-        if WindowStroke then
-            Tween(WindowStroke, { Color = newT.Border }, 0.4)
-        end
-        if _FloatBtnStroke then
-            Tween(_FloatBtnStroke, { Color = newT.AccentDark }, 0.4)
-        end
-
-        -- Top control buttons background
-        for _, btn in ipairs(_topBtnFrames) do
-            Tween(btn, { BackgroundColor3 = newT.CardAlt }, 0.4)
-        end
-
-        -- All registered elements (cards, toggles, sliders, etc.)
-        -- Walk the ScreenGui tree to update every element
-        local function UpdateDescendants(parent)
-            for _, obj in ipairs(parent:GetDescendants()) do
-                local cls = obj.ClassName
-                -- Card frames
-                if cls == "Frame" and obj.Name == "" then
-                    if obj.BackgroundColor3 == T.Card or obj.BackgroundColor3 == Color3.fromRGB(36,0,10) then
-                    end
+        local dur = 0.35
+        for _, obj in ipairs(ScreenGui:GetDescendants()) do
+            if obj:IsA("GuiObject") then
+                local nb = bgMap[obj.BackgroundColor3]
+                if nb then Tween(obj, { BackgroundColor3 = nb }, dur) end
+                if obj:IsA("TextLabel") or obj:IsA("TextBox") then
+                    local nt = textMap[obj.TextColor3]
+                    if nt then Tween(obj, { TextColor3 = nt }, dur) end
                 end
-                -- UIStroke
-                if cls == "UIStroke" then
-                    local p = obj.Parent
-                    if p and p:IsA("GuiObject") then
-                        Tween(obj, { Color = newT.Border }, 0.4)
-                    end
+                if obj:IsA("ImageLabel") or obj:IsA("ImageButton") then
+                    local ni = imgMap[obj.ImageColor3]
+                    if ni then Tween(obj, { ImageColor3 = ni }, dur) end
                 end
-                -- ScrollingFrames
-                if cls == "ScrollingFrame" then
-                    obj.ScrollBarImageColor3 = newT.ScrollBar
-                end
+            elseif obj:IsA("UIStroke") then
+                local ns = strokeMap[obj.Color]
+                if ns then Tween(obj, { Color = ns }, dur) end
+            elseif obj:IsA("ScrollingFrame") then
+                obj.ScrollBarImageColor3 = newT.ScrollBar
             end
         end
 
-        -- Iterate all content and update colour properties by matching known theme colours
-        local function RecolourAll(root, oldT, nT)
-            for _, obj in ipairs(root:GetDescendants()) do
-                if obj:IsA("GuiObject") then
-                    local bg = obj.BackgroundColor3
-                    -- Map old theme colours → new theme colours
-                    local colourMap = {
-                        [oldT.Background] = nT.Background,
-                        [oldT.Card]       = nT.Card,
-                        [oldT.CardAlt]    = nT.CardAlt,
-                        [oldT.TopBar]     = nT.TopBar,
-                        [oldT.Accent]     = nT.Accent,
-                        [oldT.AccentDark] = nT.AccentDark,
-                        [oldT.Toggle]     = nT.Toggle,
-                        [oldT.Border]     = nT.Border,
-                        [oldT.SectionBar] = nT.SectionBar,
-                    }
-                    local mapped = colourMap[bg]
-                    if mapped then
-                        Tween(obj, { BackgroundColor3 = mapped }, 0.35)
-                    end
-                    -- TextLabel colours
-                    if obj:IsA("TextLabel") or obj:IsA("TextBox") then
-                        local tc = obj.TextColor3
-                        local textMap = {
-                            [oldT.Text]    = nT.Text,
-                            [oldT.SubText] = nT.SubText,
-                            [oldT.Muted]   = nT.Muted,
-                            [oldT.Accent]  = nT.Accent,
-                        }
-                        local mt = textMap[tc]
-                        if mt then
-                            Tween(obj, { TextColor3 = mt }, 0.35)
-                        end
-                    end
-                    -- ImageLabel colours
-                    if obj:IsA("ImageLabel") or obj:IsA("ImageButton") then
-                        local ic = obj.ImageColor3
-                        local imgMap = {
-                            [oldT.Accent]     = nT.Accent,
-                            [oldT.AccentDark] = nT.AccentDark,
-                            [oldT.Muted]      = nT.Muted,
-                            [oldT.TabInactive]= nT.TabInactive,
-                            [oldT.TabActive]  = nT.TabActive,
-                        }
-                        local mi = imgMap[ic]
-                        if mi then
-                            Tween(obj, { ImageColor3 = mi }, 0.35)
-                        end
-                    end
-                end
-                -- UIStroke
-                if obj:IsA("UIStroke") then
-                    local sc = obj.Color
-                    local strokeMap = {
-                        [oldT.Border]     = nT.Border,
-                        [oldT.Accent]     = nT.Accent,
-                        [oldT.AccentDark] = nT.AccentDark,
-                    }
-                    local ms = strokeMap[sc]
-                    if ms then
-                        Tween(obj, { Color = ms }, 0.35)
-                    end
-                end
-                -- ScrollingFrames
-                if obj:IsA("ScrollingFrame") then
-                    obj.ScrollBarImageColor3 = nT.ScrollBar
-                end
-            end
-        end
-
-        -- Capture old theme colours before overwriting T
-        local oldTheme = {}
-        for k, v in pairs(T) do oldTheme[k] = v end
-
-        RecolourAll(Window, oldTheme, newT)
-
-        -- Now update T in-place
+        -- NOW update T in-place so future closures use new colours
         for k, v in pairs(newT) do T[k] = v end
 
-        -- Re-activate the current tab so underlines/icon colours refresh
+        -- Re-apply tab active/inactive state with correct new colours
         for _, tabRef in ipairs(self._Tabs) do
             if tabRef._Title == self._ActiveTab then
                 Tween(tabRef._Line,   { Size = UDim2.new(0, 22, 0, 2.5), BackgroundColor3 = newT.TabActive }, 0.25)
                 if tabRef._IconImg then
-                    Tween(tabRef._IconImg, { ImageColor3 = newT.TabActive }, 0.2)
+                    Tween(tabRef._IconImg, { TextColor3 = newT.TabActive }, 0.2)
+                end
+                if tabRef._IconBg then
+                    Tween(tabRef._IconBg, { BackgroundColor3 = newT.CardAlt, BackgroundTransparency = 0.75 }, 0.2)
                 end
             else
-                Tween(tabRef._Line,   { Size = UDim2.new(0, 0, 0, 2.5) }, 0.2)
+                Tween(tabRef._Line, { Size = UDim2.new(0, 0, 0, 2.5) }, 0.2)
                 if tabRef._IconImg then
-                    Tween(tabRef._IconImg, { ImageColor3 = newT.TabInactive }, 0.2)
+                    Tween(tabRef._IconImg, { TextColor3 = newT.TabInactive }, 0.2)
+                end
+                if tabRef._IconBg then
+                    Tween(tabRef._IconBg, { BackgroundTransparency = 1 }, 0.2)
                 end
             end
         end
@@ -1617,14 +1634,20 @@ function Mixusfield:CreateWindow(options)
         })
         MakeCorner(TabIconBg, 11)
 
-        local tabIconImg = New("ImageLabel", {
+        -- Use emoji TextLabel for tab icon (reliable on all devices)
+        local tabIconEmoji = IconEmoji[tabIcon] or "●"
+        local tabIconImg = New("TextLabel", {
             Parent               = TabIconBg,
             BackgroundTransparency = 1,
             AnchorPoint          = Vector2.new(0.5, 0.5),
             Position             = UDim2.new(0.5, 0, 0.5, 0),
-            Size                 = UDim2.new(0, 18, 0, 18),
-            Image                = Icons[tabIcon] or Icons.home,
-            ImageColor3          = T.TabInactive,
+            Size                 = UDim2.new(1, 0, 1, 0),
+            Text                 = tabIconEmoji,
+            TextColor3           = T.TabInactive,
+            TextSize             = 16,
+            Font                 = Enum.Font.GothamBold,
+            TextXAlignment       = Enum.TextXAlignment.Center,
+            TextYAlignment       = Enum.TextYAlignment.Center,
             ZIndex               = 7,
         })
 
@@ -1669,13 +1692,13 @@ function Mixusfield:CreateWindow(options)
                 Tween(t._Line,   { Size = UDim2.new(0, 0, 0, 2.5) }, 0.2)
                 Tween(t._IconBg, { BackgroundTransparency = 1 },      0.2)
                 if t._IconImg then
-                    Tween(t._IconImg, { ImageColor3 = T.TabInactive }, 0.2)
+                    Tween(t._IconImg, { TextColor3 = T.TabInactive }, 0.2)
                 end
                 t._Page.Visible = false
             end
             Tween(TabLine,    { Size = UDim2.new(0, 22, 0, 2.5), BackgroundColor3 = T.TabActive }, 0.25, Enum.EasingStyle.Back)
             Tween(TabIconBg,  { BackgroundTransparency = 0.75 },  0.2)
-            Tween(tabIconImg, { ImageColor3 = T.TabActive },      0.2)
+            Tween(tabIconImg, { TextColor3 = T.TabActive },        0.2)
             TabPage.Visible = true
             self._ActiveTab = tabTitle
         end
@@ -2804,11 +2827,11 @@ function Mixusfield:CreateWindow(options)
     end
 
     if DoKey then
-        Window.Visible = false
-        Shadow.Visible = false
-        local delay = DoStartup and 3.7 or 0.1
-        task.delay(delay, function()
+        -- Window is already hidden (Visible = false set at creation)
+        local keyDelay = DoStartup and 3.7 or 0.1
+        task.delay(keyDelay, function()
             ShowKeySystem(KeyOptions, T, ScreenGui, function()
+                -- Key accepted: show window
                 Window.Visible = true
                 Shadow.Visible = true
                 Window.Size = UDim2.new(0, WINDOW_W, 0, 0)
@@ -2818,7 +2841,7 @@ function Mixusfield:CreateWindow(options)
             end)
         end)
     else
-        -- Animate window in
+        -- No key system: animate window in after optional startup delay
         Window.Size = UDim2.new(0, WINDOW_W, 0, 0)
         task.delay(DoStartup and 3.7 or 0.1, function()
             Tween(Window, { Size = UDim2.new(0, WINDOW_W, 0, WINDOW_H) }, 0.4, Enum.EasingStyle.Back)
