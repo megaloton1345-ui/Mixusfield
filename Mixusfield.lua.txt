@@ -1024,7 +1024,8 @@ function Mixusfield:CreateWindow(options)
     local Author     = options.Author      or "Unknown"
     local ThemeName  = options.Theme       or "Dark"
     local ConfigName = options.ConfigName  or "Default"
-    local Icon       = options.Icon        or Icons.zap
+    local IconInput  = options.Icon        or "zap"
+    local Icon       = Icons[IconInput] or IconInput
     local DoStartup  = options.StartupPopup ~= false
     local DoKey      = options.KeySystem   == true
     local KeyOptions = options.KeySystemOptions or {}
@@ -1076,7 +1077,9 @@ function Mixusfield:CreateWindow(options)
         ZIndex           = 2,
     })
     MakeCorner(Window, 18)
-    MakeStroke(Window, T.Border, 1, 0)
+    -- Store stroke references so SetTheme can update them
+    local WindowStroke    = MakeStroke(Window, T.Border, 1, 0)
+    local _FloatBtnStroke -- assigned after FloatBtn creation
 
     -- Drop shadow
     local Shadow = New("ImageLabel", {
@@ -1160,11 +1163,12 @@ function Mixusfield:CreateWindow(options)
     -- Control buttons (right side) -- 30x30, gap 8
     local BTN_SIZE = 30
     local BTN_GAP  = 8
+    local _topBtnFrames = {} -- collect for theme updates
     local function MakeTopBtn(color, index, iconImg)
         local xOff = -(index * (BTN_SIZE + BTN_GAP)) - 10
         local Btn = New("Frame", {
             Parent           = TopBar,
-            BackgroundColor3 = Color3.fromRGB(38, 18, 18),
+            BackgroundColor3 = T.CardAlt,
             Position         = UDim2.new(1, xOff, 0.5, -(BTN_SIZE/2)),
             Size             = UDim2.new(0, BTN_SIZE, 0, BTN_SIZE),
             ZIndex           = 4,
@@ -1191,7 +1195,7 @@ function Mixusfield:CreateWindow(options)
             Tween(Btn, { BackgroundColor3 = color }, 0.15)
         end)
         clickBtn.MouseLeave:Connect(function()
-            Tween(Btn, { BackgroundColor3 = Color3.fromRGB(38, 18, 18) }, 0.15)
+            Tween(Btn, { BackgroundColor3 = T.CardAlt }, 0.15)
         end)
         clickBtn.MouseButton1Down:Connect(function()
             Tween(Btn, { Size = UDim2.new(0, BTN_SIZE - 4, 0, BTN_SIZE - 4) }, 0.08)
@@ -1199,6 +1203,7 @@ function Mixusfield:CreateWindow(options)
         clickBtn.MouseButton1Up:Connect(function()
             Tween(Btn, { Size = UDim2.new(0, BTN_SIZE, 0, BTN_SIZE) }, 0.12, Enum.EasingStyle.Back)
         end)
+        table.insert(_topBtnFrames, Btn)
         return clickBtn, Btn
     end
 
@@ -1348,7 +1353,7 @@ function Mixusfield:CreateWindow(options)
     })
     MakeCorner(FloatBtn, 16)
     -- Glow stroke
-    MakeStroke(FloatBtn, T.AccentDark, 2, 0.3)
+    _FloatBtnStroke = MakeStroke(FloatBtn, T.AccentDark, 2, 0.3)
 
     New("ImageLabel", {
         Parent               = FloatBtn,
@@ -1433,11 +1438,150 @@ function Mixusfield:CreateWindow(options)
         if not newT then return end
         self._Theme = newT
         self._Save:Set("__Theme", name)
-        Tween(Window,    { BackgroundColor3 = newT.Background }, 0.4)
-        Tween(TopBar,    { BackgroundColor3 = newT.TopBar },     0.4)
-        Tween(TabBarBg,  { BackgroundColor3 = newT.TopBar },     0.4)
-        Tween(IconBg,    { BackgroundColor3 = newT.Accent },     0.4)
-        Tween(FloatBtn,  { BackgroundColor3 = newT.Accent },     0.4)
+
+        -- Update T reference (used by closures for new elements)
+        -- We update the captured T table in-place so existing closures pick up changes
+        for k, v in pairs(newT) do T[k] = v end
+
+        -- Window frame
+        Tween(Window,   { BackgroundColor3 = newT.Background }, 0.4)
+        Tween(TopBar,   { BackgroundColor3 = newT.TopBar },     0.4)
+        Tween(TabBarBg, { BackgroundColor3 = newT.TopBar },     0.4)
+        Tween(IconBg,   { BackgroundColor3 = newT.Accent },     0.4)
+        Tween(FloatBtn, { BackgroundColor3 = newT.Accent },     0.4)
+        Tween(SearchBar,{ BackgroundColor3 = newT.CardAlt },    0.4)
+
+        -- Window border stroke
+        if WindowStroke then
+            Tween(WindowStroke, { Color = newT.Border }, 0.4)
+        end
+        if _FloatBtnStroke then
+            Tween(_FloatBtnStroke, { Color = newT.AccentDark }, 0.4)
+        end
+
+        -- Top control buttons background
+        for _, btn in ipairs(_topBtnFrames) do
+            Tween(btn, { BackgroundColor3 = newT.CardAlt }, 0.4)
+        end
+
+        -- All registered elements (cards, toggles, sliders, etc.)
+        -- Walk the ScreenGui tree to update every element
+        local function UpdateDescendants(parent)
+            for _, obj in ipairs(parent:GetDescendants()) do
+                local cls = obj.ClassName
+                -- Card frames
+                if cls == "Frame" and obj.Name == "" then
+                    if obj.BackgroundColor3 == T.Card or obj.BackgroundColor3 == Color3.fromRGB(36,0,10) then
+                    end
+                end
+                -- UIStroke
+                if cls == "UIStroke" then
+                    local p = obj.Parent
+                    if p and p:IsA("GuiObject") then
+                        Tween(obj, { Color = newT.Border }, 0.4)
+                    end
+                end
+                -- ScrollingFrames
+                if cls == "ScrollingFrame" then
+                    obj.ScrollBarImageColor3 = newT.ScrollBar
+                end
+            end
+        end
+
+        -- Iterate all content and update colour properties by matching known theme colours
+        local function RecolourAll(root, oldT, nT)
+            for _, obj in ipairs(root:GetDescendants()) do
+                if obj:IsA("GuiObject") then
+                    local bg = obj.BackgroundColor3
+                    -- Map old theme colours → new theme colours
+                    local colourMap = {
+                        [oldT.Background] = nT.Background,
+                        [oldT.Card]       = nT.Card,
+                        [oldT.CardAlt]    = nT.CardAlt,
+                        [oldT.TopBar]     = nT.TopBar,
+                        [oldT.Accent]     = nT.Accent,
+                        [oldT.AccentDark] = nT.AccentDark,
+                        [oldT.Toggle]     = nT.Toggle,
+                        [oldT.Border]     = nT.Border,
+                        [oldT.SectionBar] = nT.SectionBar,
+                    }
+                    local mapped = colourMap[bg]
+                    if mapped then
+                        Tween(obj, { BackgroundColor3 = mapped }, 0.35)
+                    end
+                    -- TextLabel colours
+                    if obj:IsA("TextLabel") or obj:IsA("TextBox") then
+                        local tc = obj.TextColor3
+                        local textMap = {
+                            [oldT.Text]    = nT.Text,
+                            [oldT.SubText] = nT.SubText,
+                            [oldT.Muted]   = nT.Muted,
+                            [oldT.Accent]  = nT.Accent,
+                        }
+                        local mt = textMap[tc]
+                        if mt then
+                            Tween(obj, { TextColor3 = mt }, 0.35)
+                        end
+                    end
+                    -- ImageLabel colours
+                    if obj:IsA("ImageLabel") or obj:IsA("ImageButton") then
+                        local ic = obj.ImageColor3
+                        local imgMap = {
+                            [oldT.Accent]     = nT.Accent,
+                            [oldT.AccentDark] = nT.AccentDark,
+                            [oldT.Muted]      = nT.Muted,
+                            [oldT.TabInactive]= nT.TabInactive,
+                            [oldT.TabActive]  = nT.TabActive,
+                        }
+                        local mi = imgMap[ic]
+                        if mi then
+                            Tween(obj, { ImageColor3 = mi }, 0.35)
+                        end
+                    end
+                end
+                -- UIStroke
+                if obj:IsA("UIStroke") then
+                    local sc = obj.Color
+                    local strokeMap = {
+                        [oldT.Border]     = nT.Border,
+                        [oldT.Accent]     = nT.Accent,
+                        [oldT.AccentDark] = nT.AccentDark,
+                    }
+                    local ms = strokeMap[sc]
+                    if ms then
+                        Tween(obj, { Color = ms }, 0.35)
+                    end
+                end
+                -- ScrollingFrames
+                if obj:IsA("ScrollingFrame") then
+                    obj.ScrollBarImageColor3 = nT.ScrollBar
+                end
+            end
+        end
+
+        -- Capture old theme colours before overwriting T
+        local oldTheme = {}
+        for k, v in pairs(T) do oldTheme[k] = v end
+
+        RecolourAll(Window, oldTheme, newT)
+
+        -- Now update T in-place
+        for k, v in pairs(newT) do T[k] = v end
+
+        -- Re-activate the current tab so underlines/icon colours refresh
+        for _, tabRef in ipairs(self._Tabs) do
+            if tabRef._Title == self._ActiveTab then
+                Tween(tabRef._Line,   { Size = UDim2.new(0, 22, 0, 2.5), BackgroundColor3 = newT.TabActive }, 0.25)
+                if tabRef._IconImg then
+                    Tween(tabRef._IconImg, { ImageColor3 = newT.TabActive }, 0.2)
+                end
+            else
+                Tween(tabRef._Line,   { Size = UDim2.new(0, 0, 0, 2.5) }, 0.2)
+                if tabRef._IconImg then
+                    Tween(tabRef._IconImg, { ImageColor3 = newT.TabInactive }, 0.2)
+                end
+            end
+        end
     end
 
     function WindowObj:Destroy()
@@ -1464,7 +1608,7 @@ function Mixusfield:CreateWindow(options)
         local TAB_ICON_SZ = 34
         local TabIconBg = New("Frame", {
             Parent               = TabBtn,
-            BackgroundColor3     = Color3.fromRGB(38, 18, 18),
+            BackgroundColor3     = T.CardAlt,
             BackgroundTransparency = 1,
             AnchorPoint          = Vector2.new(0.5, 0.5),
             Position             = UDim2.new(0.5, 0, 0.5, -1),
@@ -1529,9 +1673,9 @@ function Mixusfield:CreateWindow(options)
                 end
                 t._Page.Visible = false
             end
-            Tween(TabLine,   { Size = UDim2.new(0, 22, 0, 2.5) },  0.25, Enum.EasingStyle.Back)
-            Tween(TabIconBg, { BackgroundTransparency = 0.75 },     0.2)
-            Tween(tabIconImg,{ ImageColor3 = T.TabActive },         0.2)
+            Tween(TabLine,    { Size = UDim2.new(0, 22, 0, 2.5), BackgroundColor3 = T.TabActive }, 0.25, Enum.EasingStyle.Back)
+            Tween(TabIconBg,  { BackgroundTransparency = 0.75 },  0.2)
+            Tween(tabIconImg, { ImageColor3 = T.TabActive },      0.2)
             TabPage.Visible = true
             self._ActiveTab = tabTitle
         end
@@ -1555,6 +1699,7 @@ function Mixusfield:CreateWindow(options)
             _IconBg  = TabIconBg,
             _IconImg = tabIconImg,
             _Page    = TabPage,
+            _Btn     = TabClickBtn,
         }
         table.insert(self._Tabs, tabRef)
         if #self._Tabs == 1 then ActivateTab() end
@@ -1733,8 +1878,8 @@ function Mixusfield:CreateWindow(options)
                 local Track = New("Frame", {
                     Parent           = Row,
                     BackgroundColor3 = T.Toggle,
-                    AnchorPoint      = Vector2.new(1, 0),
-                    Position         = UDim2.new(1, 0, 0, desc ~= "" and 17 or 8),
+                    AnchorPoint      = Vector2.new(1, 0.5),
+                    Position         = UDim2.new(1, 0, 0, desc ~= "" and 19 or 9),
                     Size             = UDim2.new(0, TrackW, 0, TrackH),
                     ZIndex           = 6,
                 })
@@ -1743,7 +1888,8 @@ function Mixusfield:CreateWindow(options)
                 local Knob = New("Frame", {
                     Parent           = Track,
                     BackgroundColor3 = Color3.fromRGB(200, 200, 200),
-                    Position         = UDim2.new(0, 3, 0.5, -10),
+                    AnchorPoint      = Vector2.new(0, 0.5),
+                    Position         = UDim2.new(0, 3, 0.5, 0),
                     Size             = UDim2.new(0, 20, 0, 20),
                     ZIndex           = 7,
                 })
@@ -1763,10 +1909,10 @@ function Mixusfield:CreateWindow(options)
                     local dur = animated and 0.2 or 0
                     if v then
                         Tween(Track, { BackgroundColor3 = T.Accent }, dur)
-                        Tween(Knob,  { Position = UDim2.new(1, -23, 0.5, -10), BackgroundColor3 = Color3.fromRGB(255, 255, 255) }, dur)
+                        Tween(Knob,  { Position = UDim2.new(1, -23, 0.5, 0), BackgroundColor3 = Color3.fromRGB(255, 255, 255) }, dur)
                     else
                         Tween(Track, { BackgroundColor3 = T.Toggle }, dur)
-                        Tween(Knob,  { Position = UDim2.new(0, 3, 0.5, -10), BackgroundColor3 = Color3.fromRGB(180, 180, 180) }, dur)
+                        Tween(Knob,  { Position = UDim2.new(0, 3, 0.5, 0), BackgroundColor3 = Color3.fromRGB(180, 180, 180) }, dur)
                     end
                 end
 
@@ -2360,17 +2506,17 @@ function Mixusfield:CreateWindow(options)
                 local cols = #stats
                 local gap  = 6
                 for i, stat in ipairs(stats) do
-                    local totalGap = gap * (cols - 1)
-                    local w = (1 / cols)
-                    local x = (i - 1) * w
-                    local xOff = i == 1 and 0 or gap / 2
-                    local wOff = i == 1 and -(gap / 2) or (i == cols and -(gap / 2) or -gap)
+                    local w   = (1 / cols)
+                    local x   = (i - 1) * w
+                    -- Each card gets equal width minus gaps distributed evenly
+                    local xPxOff = i == 1 and 0 or math.ceil(gap * (i - 1) / cols)
+                    local wPxOff = -(math.floor(gap * (cols - 1) / cols))
 
                     local Card2 = New("Frame", {
                         Parent           = RowFrame,
                         BackgroundColor3 = T.Card,
-                        Position         = UDim2.new(x, i == 1 and 0 or (gap * (i - 1) / cols), 0, 0),
-                        Size             = UDim2.new(w, -math.ceil(totalGap / cols), 0, 58),
+                        Position         = UDim2.new(x, xPxOff, 0, 0),
+                        Size             = UDim2.new(w, i < cols and wPxOff - gap + math.ceil(gap / cols) or wPxOff, 0, 58),
                         ZIndex           = 5,
                     })
                     MakeCorner(Card2, 11)
@@ -2443,7 +2589,7 @@ function Mixusfield:CreateWindow(options)
                     Parent               = Card,
                     BackgroundTransparency = 1,
                     AnchorPoint          = Vector2.new(1, 0.5),
-                    Position             = UDim2.new(1, 0, 0, desc2 ~= "" and 18 or 9),
+                    Position             = UDim2.new(1, 0, 0.5, 0),
                     Size                 = UDim2.new(0, 14, 0, 14),
                     Image                = Icons.chevron,
                     ImageRotation        = -90,
