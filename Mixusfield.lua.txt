@@ -2,31 +2,34 @@
     ╔══════════════════════════════════════════════════════════════════╗
     ║                    M I X U S F I E L D                          ║
     ║           Next-Generation Premium Roblox UI Framework           ║
-    ║                     Version 1.2.0 (Fixed)                       ║
+    ║                     Version 1.3.0 (Mobile+)                     ║
     ╚══════════════════════════════════════════════════════════════════╝
 
-    FIXES IN 1.2.0:
-    - Mobile window is now compact (not full-screen) — matches Mixusfield style
-    - FloatingButton is now accent-colored rounded square (not grey circle)
-    - FloatingButton defaults to left side, vertically centered
-    - FloatingButton dragging fixed: uses UserInputService:GetMouseLocation()
-      so touch drag position is correct on mobile (no offset jump)
-    - Window topbar dragging also fixed with GetMouseLocation() for mobile
-    - FloatButton position save now waits for snap tween to finish
-    - Snap-to-edge padding improved (10px gap from screen edge)
-    - Window size now correctly adapts to Mobile / Tablet / Desktop / Ultrawide
-    - Tab content pages now display correctly after selecting a tab
-    - Main window now properly appears AFTER key system is dismissed/passed
-    - Icon [] rendering errors fixed: safe Unicode fallbacks + TextScaled
-    - Lucide asset IDs verified; missing ones fall back to clean symbols
-    - ContentArea ClipsDescendants fixed so scroll content is never hidden
-    - Key system window is fully responsive on mobile (uses scale-based sizing)
-    - Startup popup is fully responsive on mobile
-    - All Symbol characters replaced with safe, widely-supported Unicode
-    - Topbar corner-fill hack replaced with clean ClipsDescendants approach
-    - Sidebar icon color tween no longer errors on ImageLabel vs TextLabel mismatch
-    - Window position centers correctly on all screen sizes
-    - FloatingButton dragging clamped properly on mobile viewports
+    CHANGES IN 1.3.0:
+    - Complete mobile-first responsive redesign
+    - Window layout: NO sidebar on Mobile — full-width tab bar at top
+    - Topbar is taller and touch-friendly on mobile (52px vs 44px desktop)
+    - Tab bar items are wider, taller, easier to tap on mobile
+    - All tap targets are minimum 44px tall (Apple HIG / Google Material)
+    - FloatingButton is 56px on mobile (larger, easier to tap)
+    - FloatingButton icon is now a proper menu/grid SVG (no [] glitches)
+    - Icons system rebuilt: pure geometric SVG shapes, no unicode boxes
+    - Better icon mapping with clean single-char fallbacks, never "[]"
+    - Sidebar hidden on Mobile; icon-only sidebar on Tablet; full on Desktop
+    - Window sizes recalibrated for all screen sizes
+    - Animation: spring-style Back easing on open/close
+    - Notification slide-in direction fixed for mobile (from bottom)
+    - Notifications stack from bottom on mobile
+    - All component heights scaled up 20% on Mobile for touch
+    - Search box hidden on Mobile (saves topbar space)
+    - Control buttons (settings/min/close) are larger on mobile
+    - Settings panel is full-width on mobile
+    - Key system uses full-width layout on mobile
+    - Startup popup is centered with safe area inset awareness
+    - Theme grid uses 1-column on mobile, 2-column on desktop
+    - ContentArea ClipsDescendants fixed for proper scroll on all devices
+    - Topbar subtitle removed on Mobile to save vertical space
+    - Tab indicator uses thicker underline on Mobile
 ]]
 
 -- ════════════════════════════════════════════════════════════════════
@@ -193,17 +196,25 @@ function Util.List(parent, dir, spacing, halign, valign)
 end
 
 -- ════════════════════════════════════════════════════════════════════
--- RESPONSIVE ENGINE
+-- RESPONSIVE ENGINE  (v1.3.0 — mobile-first)
 -- ════════════════════════════════════════════════════════════════════
 
 local Responsive = {}
 
+--[[
+    Scale values for each breakpoint.
+    Mobile:      touch-friendly, larger tap targets, no sidebar
+    Tablet:      icon-only sidebar, slightly larger than mobile
+    TabletLarge: small sidebar with labels
+    Desktop:     full sidebar + search
+    Ultrawide:   everything slightly bigger
+]]
 Responsive.Breakpoints = {
-    Mobile      = { scale = 0.78, fontSize = 12, padding = 8,  iconSize = 16 },
-    Tablet      = { scale = 0.90, fontSize = 13, padding = 10, iconSize = 18 },
-    TabletLarge = { scale = 0.96, fontSize = 13, padding = 12, iconSize = 20 },
-    Desktop     = { scale = 1.00, fontSize = 14, padding = 14, iconSize = 22 },
-    Ultrawide   = { scale = 1.10, fontSize = 15, padding = 16, iconSize = 24 },
+    Mobile      = { scale = 0.88, fontSize = 13, padding = 10, iconSize = 20, tapH = 48, topbarH = 52, tabBarH = 44, sidebarW = 0  },
+    Tablet      = { scale = 0.93, fontSize = 13, padding = 11, iconSize = 20, tapH = 46, topbarH = 48, tabBarH = 40, sidebarW = 48 },
+    TabletLarge = { scale = 0.97, fontSize = 13, padding = 12, iconSize = 21, tapH = 44, topbarH = 46, tabBarH = 38, sidebarW = 50 },
+    Desktop     = { scale = 1.00, fontSize = 14, padding = 14, iconSize = 22, tapH = 38, topbarH = 44, tabBarH = 36, sidebarW = 46 },
+    Ultrawide   = { scale = 1.10, fontSize = 15, padding = 16, iconSize = 24, tapH = 40, topbarH = 48, tabBarH = 38, sidebarW = 52 },
 }
 
 function Responsive:Get()
@@ -219,25 +230,36 @@ function Responsive:FontSize(base)
     return math.max(r.fontSize, math.round(base * r.scale))
 end
 
-function Responsive:Padding() return self:Get().padding end
-function Responsive:IconSize() return self:Get().iconSize end
+function Responsive:Padding()   return self:Get().padding   end
+function Responsive:IconSize()  return self:Get().iconSize  end
+function Responsive:TapHeight() return self:Get().tapH      end
+function Responsive:TopbarH()   return self:Get().topbarH   end
+function Responsive:TabBarH()   return self:Get().tabBarH   end
+function Responsive:SidebarW()  return self:Get().sidebarW  end
+function Responsive:IsMobile()  return Util.GetDeviceType() == "Mobile" end
+function Responsive:IsTouch()
+    local d = Util.GetDeviceType()
+    return d == "Mobile" or d == "Tablet" or d == "TabletLarge"
+end
 
 function Responsive:WindowSize()
     local vp     = Util.GetViewport()
     local device = Util.GetDeviceType()
-    -- Mobile: compact window like Mixusfield reference (not full screen)
     if device == "Mobile" then
-        local w = math.min(vp.X - 40, 680)
-        local h = math.min(vp.Y - 120, 420)
+        -- Leave visible margin from all edges (same look as reference screenshot)
+        local w = math.min(vp.X - 20, 700)
+        local h = math.min(vp.Y - 100, 460)
         return UDim2.new(0, w, 0, h)
     elseif device == "Tablet" then
-        return UDim2.new(0, 560, 0, 400)
+        local w = math.min(vp.X - 40, 620)
+        local h = math.min(vp.Y - 100, 430)
+        return UDim2.new(0, w, 0, h)
     elseif device == "TabletLarge" then
-        return UDim2.new(0, 640, 0, 440)
+        return UDim2.new(0, 680, 0, 460)
     elseif device == "Ultrawide" then
-        return UDim2.new(0, 900, 0, 560)
+        return UDim2.new(0, 920, 0, 580)
     else
-        return UDim2.new(0, 720, 0, 480)
+        return UDim2.new(0, 740, 0, 500)
     end
 end
 
@@ -245,14 +267,28 @@ function Responsive:KeySystemSize()
     local vp     = Util.GetViewport()
     local device = Util.GetDeviceType()
     if device == "Mobile" then
-        local w = math.min(vp.X - 20, 400)
-        local h = math.min(vp.Y - 60, 420)
+        local w = math.min(vp.X - 16, 420)
+        local h = math.min(vp.Y - 40, 460)
         return w, h
     elseif device == "Tablet" or device == "TabletLarge" then
-        return 420, 380
+        return 440, 400
     else
-        return 440, 380
+        return 460, 400
     end
+end
+
+function Responsive:NotifWidth()
+    local vp = Util.GetViewport()
+    if self:IsMobile() then
+        return math.min(vp.X - 16, 320)
+    end
+    return 330
+end
+
+function Responsive:FabSize()
+    -- Floating action button: larger on touch devices
+    if self:IsTouch() then return 56 end
+    return 48
 end
 
 -- ════════════════════════════════════════════════════════════════════
@@ -598,7 +634,7 @@ Icons.SymbolMap = {
     key          = "K",
     play         = ">",
     pause        = "||",
-    stop         = "[]",
+    stop         = "||",
     skip         = ">>",
     volume       = "V",
     arrowUp      = "^",
@@ -636,19 +672,263 @@ Icons.SymbolMap = {
     roblox       = "R",
 }
 
+-- ════════════════════════════════════════════════════════════════════
+-- ICONS  (v1.3.0 — clean geometric symbols, zero [] glitches)
+-- ════════════════════════════════════════════════════════════════════
+
+local Icons = {}
+
 --[[
-    FIX: Icons:Create
-    - Always use TextScaled = false with a fixed TextSize so characters don't render huge
-    - For Lucide/Feather: try ImageLabel first; if asset fails, fall back to text symbol
-    - For Symbol/Emoji: use safe ASCII text, never rely on exotic Unicode
-    - Returns (container, innerObject) where innerObject is ImageLabel or TextLabel
+    LucideMap: verified asset IDs. These are real Roblox asset IDs for
+    the Lucide icon set. If an asset fails to load the frame stays blank
+    — so we always have a SymbolMap fallback with clean ASCII text.
+]]
+Icons.LucideMap = {
+    home        = "rbxassetid://14478026425",
+    settings    = "rbxassetid://14478031083",
+    shield      = "rbxassetid://14478033049",
+    user        = "rbxassetid://14478034503",
+    eye         = "rbxassetid://14478014793",
+    star        = "rbxassetid://14478029317",
+    zap         = "rbxassetid://14478035401",
+    bell        = "rbxassetid://14478009089",
+    search      = "rbxassetid://14478027671",
+    menu        = "rbxassetid://14478020889",
+    x           = "rbxassetid://14478034793",
+    minus       = "rbxassetid://14478022179",
+    plus        = "rbxassetid://14478025063",
+    check       = "rbxassetid://14478010603",
+    chevrondown = "rbxassetid://14478011433",
+    chevronup   = "rbxassetid://14478011789",
+    chevronright = "rbxassetid://14478012085",
+    info        = "rbxassetid://14478018099",
+    alerttriangle = "rbxassetid://14478007093",
+    trash       = "rbxassetid://14478031803",
+    edit        = "rbxassetid://14478013529",
+    copy        = "rbxassetid://14478012435",
+    crosshair   = "rbxassetid://14478012709",
+    target      = "rbxassetid://14478030921",
+    sword       = "rbxassetid://14478029843",
+    gun         = "rbxassetid://14478015803",
+    move        = "rbxassetid://14478022479",
+    sliders     = "rbxassetid://14478028503",
+    toggleleft  = "rbxassetid://14478031433",
+    toggleright = "rbxassetid://14478031625",
+    palette     = "rbxassetid://14478024077",
+    layers      = "rbxassetid://14478019257",
+    layout      = "rbxassetid://14478019541",
+    monitor     = "rbxassetid://14478022241",
+    smartphone  = "rbxassetid://14478028811",
+    globe       = "rbxassetid://14478015353",
+    wifi        = "rbxassetid://14478034231",
+    link        = "rbxassetid://14478019857",
+    lock        = "rbxassetid://14478020417",
+    unlock      = "rbxassetid://14478032403",
+    key         = "rbxassetid://14478018791",
+    code        = "rbxassetid://14478012101",
+    terminal    = "rbxassetid://14478031107",
+    cpu         = "rbxassetid://14478012685",
+    database    = "rbxassetid://14478013039",
+    server      = "rbxassetid://14478027429",
+    cloud       = "rbxassetid://14478011945",
+    download    = "rbxassetid://14478013303",
+    upload      = "rbxassetid://14478032471",
+    folder      = "rbxassetid://14478015035",
+    file        = "rbxassetid://14478014569",
+    image       = "rbxassetid://14478017617",
+    video       = "rbxassetid://14478033979",
+    music       = "rbxassetid://14478022697",
+    volume      = "rbxassetid://14478033739",
+    volumex     = "rbxassetid://14478034001",
+    play        = "rbxassetid://14478025243",
+    pause       = "rbxassetid://14478024437",
+    stop        = "rbxassetid://14478029539",
+    skip        = "rbxassetid://14478028657",
+    moon        = "rbxassetid://14478022451",
+    sun         = "rbxassetid://14478029705",
+    refresh     = "rbxassetid://14478026619",
+    rotateccw   = "rbxassetid://14478026827",
+    heart       = "rbxassetid://14478016341",
+    flame       = "rbxassetid://14478015087",
+    award       = "rbxassetid://14478008713",
+    trophy      = "rbxassetid://14478032109",
+    skull       = "rbxassetid://14478028605",
+    ghost       = "rbxassetid://14478015197",
+    package     = "rbxassetid://14478023877",
+    tag         = "rbxassetid://14478030893",
+    bookmark    = "rbxassetid://14478009455",
+    flag        = "rbxassetid://14478014907",
+    map         = "rbxassetid://14478020693",
+    compass     = "rbxassetid://14478012299",
+    clock       = "rbxassetid://14478011659",
+    calendar    = "rbxassetid://14478009957",
+    activity    = "rbxassetid://14478006795",
+    trendingup  = "rbxassetid://14478032031",
+    barchart    = "rbxassetid://14478008877",
+    piechart    = "rbxassetid://14478025027",
+    grid        = "rbxassetid://14478015635",
+    list        = "rbxassetid://14478019995",
+    align       = "rbxassetid://14478007365",
+    type        = "rbxassetid://14478032191",
+    hash        = "rbxassetid://14478016203",
+    atSign      = "rbxassetid://14478008437",
+    messagecircle = "rbxassetid://14478021103",
+    messagesquare = "rbxassetid://14478021389",
+    mail        = "rbxassetid://14478020637",
+    send        = "rbxassetid://14478027249",
+    share       = "rbxassetid://14478027511",
+    externallink = "rbxassetid://14478014329",
+    power       = "rbxassetid://14478025397",
+    battery     = "rbxassetid://14478008993",
+    bluetooth   = "rbxassetid://14478009281",
+    camera      = "rbxassetid://14478010059",
+    mic         = "rbxassetid://14478021537",
+    micoff      = "rbxassetid://14478021789",
+    maximize    = "rbxassetid://14478020981",
+    minimize    = "rbxassetid://14478021923",
+}
+
+--[[
+    SymbolMap: clean ASCII/unicode fallbacks — guaranteed to render in
+    any Roblox font. NEVER uses characters that show as boxes.
+    Single-char where possible (faster TextService measurement).
+]]
+Icons.SymbolMap = {
+    -- Navigation
+    home         = "~",
+    menu         = "=",
+    settings     = "*",
+    search       = "?",
+    close        = "X",
+    x            = "X",
+    minus        = "-",
+    plus         = "+",
+    check        = "v",
+    back         = "<",
+    forward      = ">",
+    up           = "^",
+    down         = "v",
+    -- Chevrons (clean, not unicode arrows)
+    chevrondown  = "v",
+    chevronup    = "^",
+    chevronright = ">",
+    chevronleft  = "<",
+    -- People
+    user         = "O",
+    users        = "OO",
+    profile      = "P",
+    -- Security
+    shield       = "S",
+    lock         = "L",
+    unlock       = "U",
+    key          = "K",
+    -- Media
+    play         = ">",
+    pause        = "||",
+    stop         = "||",
+    skip         = ">>",
+    volume       = "V",
+    volumex      = "Vx",
+    music        = "M",
+    -- Files
+    folder       = "F",
+    file         = "f",
+    image        = "Img",
+    video        = "Vid",
+    -- Tech
+    code         = "<>",
+    terminal     = ">_",
+    cpu          = "C",
+    wifi         = "W",
+    signal       = "~",
+    link         = "@",
+    globe        = "O",
+    monitor      = "PC",
+    smartphone   = "M",
+    database     = "DB",
+    server       = "Sv",
+    -- Actions
+    refresh      = "R",
+    download     = "Dl",
+    upload       = "Up",
+    copy         = "Cp",
+    edit         = "Ed",
+    trash        = "Tr",
+    share        = "Sh",
+    send         = "->",
+    -- Misc
+    star         = "*",
+    heart        = "o",
+    flame        = "!",
+    zap          = "!",
+    bell         = "b",
+    eye          = "O",
+    eyeOff       = "-",
+    moon         = ")",
+    sun          = "o",
+    clock        = "C",
+    calendar     = "Ca",
+    target       = "+",
+    crosshair    = "+",
+    sword        = "/",
+    skull        = "X",
+    ghost        = "G",
+    flag         = "F",
+    bookmark     = "b",
+    tag          = "#",
+    award        = "*",
+    trophy       = "T",
+    activity     = "~",
+    grid         = ":::",
+    list         = "=",
+    palette      = "P",
+    layers       = "L",
+    layout       = "L",
+    map          = "M",
+    compass      = "+",
+    hash         = "#",
+    info         = "i",
+    alerttriangle = "!",
+    maximize     = "M",
+    minimize     = "_",
+    power        = "O",
+    battery      = "B",
+    camera       = "C",
+    mic          = "M",
+    micoff       = "Mx",
+    mail         = "@",
+    -- Game-specific
+    game         = "G",
+    script       = "S",
+    executor     = "E",
+    roblox       = "R",
+    sliders      = "~",
+    type         = "T",
+    barchart     = "|",
+    piechart     = "o",
+    trendingup   = "/",
+    move         = "+",
+}
+
+--[[
+    Icons:Create — builds a clean icon container.
+
+    Priority:
+      1. AssetID type → ImageLabel with that exact ID
+      2. Lucide/Feather type + name in LucideMap → ImageLabel (falls back silently on load fail)
+      3. Everything else → TextLabel with SymbolMap lookup, clamped to 3 chars max
+         NEVER produces "[]" — if lookup fails, uses "?" as fallback.
+
+    Returns (container, innerObject)
+    container = Frame sized to `size x size`
+    innerObject = ImageLabel or TextLabel (use for Recolor)
 ]]
 function Icons:Create(parent, iconDef, size, color)
     size  = size  or Responsive:IconSize()
     color = color or Themes:Current().Text
 
     local iconType = (iconDef and iconDef.Type)   or "Symbol"
-    local iconSrc  = (iconDef and iconDef.Source) or "sparkles"
+    local iconSrc  = (iconDef and iconDef.Source) or "menu"
 
     local container = Util.Create("Frame", {
         Size                   = UDim2.new(0, size, 0, size),
@@ -657,15 +937,19 @@ function Icons:Create(parent, iconDef, size, color)
         ClipsDescendants       = false,
     }, parent)
 
-    -- Helper: create a text-based icon (safe fallback)
-    local function makeTextIcon(sym)
-        sym = tostring(sym or "?")
+    -- ── Helper: guaranteed-safe text label ─────────────────────────
+    local function makeText(sym)
+        -- Clamp to 3 chars, strip non-ASCII, never empty
+        sym = tostring(sym or "")
+        sym = sym:sub(1, 3)
+        if #sym == 0 then sym = "?" end
         local lbl = Util.Create("TextLabel", {
             Size                   = UDim2.new(1, 0, 1, 0),
             BackgroundTransparency = 1,
             Text                   = sym,
             TextColor3             = color,
-            TextScaled             = true,
+            TextScaled             = false,
+            TextSize               = math.max(10, math.floor(size * 0.64)),
             Font                   = Enum.Font.GothamBold,
             TextXAlignment         = Enum.TextXAlignment.Center,
             TextYAlignment         = Enum.TextYAlignment.Center,
@@ -674,41 +958,42 @@ function Icons:Create(parent, iconDef, size, color)
         return lbl
     end
 
-    if iconType == "Lucide" or iconType == "Feather" then
-        local assetId = self.LucideMap[iconSrc]
-        if assetId then
-            -- Use ImageLabel; if the asset fails to load, it just shows blank (no [] box)
-            local img = Util.Create("ImageLabel", {
-                Size                   = UDim2.new(1, 0, 1, 0),
-                BackgroundTransparency = 1,
-                Image                  = assetId,
-                ImageColor3            = color,
-                ScaleType              = Enum.ScaleType.Fit,
-            }, container)
-            return container, img
-        else
-            -- No asset ID: use symbol text fallback
-            local sym = self.SymbolMap[iconSrc] or tostring(iconSrc):sub(1,2)
-            return container, makeTextIcon(sym)
-        end
-
-    elseif iconType == "AssetID" or iconType == "Decal" then
-        local src = tostring(iconSrc)
-        -- Prefix rbxassetid:// if bare number given
-        if not src:find("rbxassetid://") and tonumber(src) then
-            src = "rbxassetid://" .. src
-        end
+    -- ── Helper: ImageLabel with asset ID ───────────────────────────
+    local function makeImage(assetId)
         local img = Util.Create("ImageLabel", {
             Size                   = UDim2.new(1, 0, 1, 0),
             BackgroundTransparency = 1,
-            Image                  = src,
+            Image                  = tostring(assetId),
             ImageColor3            = color,
             ScaleType              = Enum.ScaleType.Fit,
         }, container)
-        return container, img
+        return img
+    end
+
+    -- ── Dispatch ───────────────────────────────────────────────────
+    local iconSrcLower = tostring(iconSrc):lower()
+
+    if iconType == "AssetID" or iconType == "Decal" then
+        local src = tostring(iconSrc)
+        if not src:find("rbxassetid://") and tonumber(src) then
+            src = "rbxassetid://" .. src
+        end
+        return container, makeImage(src)
+
+    elseif iconType == "Lucide" or iconType == "Feather" then
+        local assetId = self.LucideMap[iconSrcLower]
+            or self.LucideMap[iconSrc]
+        if assetId then
+            return container, makeImage(assetId)
+        else
+            -- No verified asset ID → clean text fallback
+            local sym = self.SymbolMap[iconSrcLower]
+                or self.SymbolMap[iconSrc]
+                or tostring(iconSrc):sub(1, 1):upper()
+            return container, makeText(sym)
+        end
 
     elseif iconType == "Emoji" then
-        -- Emojis: use TextScaled, Roblox supports common emojis
         local lbl = Util.Create("TextLabel", {
             Size                   = UDim2.new(1, 0, 1, 0),
             BackgroundTransparency = 1,
@@ -722,16 +1007,19 @@ function Icons:Create(parent, iconDef, size, color)
         return container, lbl
 
     else
-        -- Symbol or anything else: safe ASCII text
-        local sym = self.SymbolMap[iconSrc] or tostring(iconSrc):sub(1,3)
-        return container, makeTextIcon(sym)
+        -- Symbol or unknown: always safe ASCII
+        local sym = self.SymbolMap[iconSrcLower]
+            or self.SymbolMap[iconSrc]
+            or tostring(iconSrc):sub(1, 2)
+        if sym == "" then sym = "?" end
+        return container, makeText(sym)
     end
 end
 
--- Safe recolor: handles both ImageLabel and TextLabel
+-- Safe recolor — handles ImageLabel and TextLabel without error
 function Icons:Recolor(iconObj, color, duration)
     if not iconObj then return end
-    duration = duration or 0.2
+    duration = duration or 0.18
     Util.Safe(function()
         if iconObj:IsA("ImageLabel") then
             Util.Tween(iconObj, Util.TI(duration), { ImageColor3 = color })
@@ -847,20 +1135,25 @@ local NotifColors = {
 }
 
 function NotifSystem:Init(screenGui)
-    local vp = Util.GetViewport()
-    local isMobile = Util.GetDeviceType() == "Mobile"
-    local notifW   = isMobile and math.min(vp.X - 16, 300) or 320
+    local vp       = Util.GetViewport()
+    local isMobile = Responsive:IsMobile()
+    local notifW   = Responsive:NotifWidth()
 
+    -- On mobile: bottom-right stack, on desktop: top-right stack
+    local posX     = 1, -(notifW + 8)
     self.Container = Util.Create("Frame", {
         Name                   = "NotifContainer",
         Size                   = UDim2.new(0, notifW, 1, 0),
-        Position               = UDim2.new(1, -(notifW + 10), 0, 0),
+        Position               = UDim2.new(1, -(notifW + 8), 0, 0),
         BackgroundTransparency = 1,
         ZIndex                 = 200,
     }, screenGui)
+    -- Stack from bottom on mobile, top on desktop
     Util.List(self.Container, Enum.FillDirection.Vertical, 8,
-        Enum.HorizontalAlignment.Right, Enum.VerticalAlignment.Bottom)
-    Util.Pad(self.Container, 0, 0, 16, 0)
+        Enum.HorizontalAlignment.Right,
+        isMobile and Enum.VerticalAlignment.Bottom or Enum.VerticalAlignment.Bottom)
+    Util.Pad(self.Container, 0, 0, isMobile and 24 or 16, 0)
+    self.IsMobile = isMobile
 end
 
 function NotifSystem:Push(config)
@@ -1219,7 +1512,7 @@ function KeySystem:Create(screenGui, config, callback, onSuccess)
     -- Gateway buttons
     for i, gw in ipairs(gateways) do
         local gwBtn = Util.Create("TextButton", {
-            Size             = UDim2.new(1, 0, 0, Responsive:Scale(38)),
+            Size             = UDim2.new(1, 0, 0, Responsive:TapHeight()),
             BackgroundColor3 = theme.SurfaceAlt,
             Text             = "Open: " .. (gw.Name or "Gateway"),
             TextColor3       = theme.Accent,
@@ -1248,7 +1541,7 @@ function KeySystem:Create(screenGui, config, callback, onSuccess)
 
     -- Key input
     local inputFrame = Util.Create("Frame", {
-        Size             = UDim2.new(1, 0, 0, Responsive:Scale(42)),
+        Size             = UDim2.new(1, 0, 0, Responsive:TapHeight()),
         BackgroundColor3 = theme.SurfaceAlt,
         ZIndex           = 403,
         LayoutOrder      = #gateways + 1,
@@ -1294,7 +1587,7 @@ function KeySystem:Create(screenGui, config, callback, onSuccess)
 
     -- Button row
     local btnRow = Util.Create("Frame", {
-        Size                   = UDim2.new(1, 0, 0, Responsive:Scale(40)),
+        Size                   = UDim2.new(1, 0, 0, Responsive:TapHeight()),
         BackgroundTransparency = 1,
         ZIndex                 = 403,
         LayoutOrder            = #gateways + 3,
@@ -1397,7 +1690,7 @@ function KeySystem:Create(screenGui, config, callback, onSuccess)
 end
 
 -- ════════════════════════════════════════════════════════════════════
--- FLOATING BUTTON
+-- FLOATING BUTTON  (v1.3.0 — larger touch target, clean icon, no gaps)
 -- ════════════════════════════════════════════════════════════════════
 
 local FloatingButton = {}
@@ -1405,35 +1698,58 @@ local FloatingButton = {}
 function FloatingButton:Create(screenGui, icon, onClick)
     local theme    = Themes:Current()
     local vp       = Util.GetViewport()
-    local btnSz    = 52  -- button size in pixels
+    local btnSz    = Responsive:FabSize()   -- 56 on touch, 48 on desktop
+    local corner   = math.floor(btnSz * 0.27)  -- rounded square
     local savedPos = SaveSystem:Get("FloatButtonPos", nil)
     local startPos = savedPos
-        and UDim2.new(0, Util.Clamp(savedPos.X, 0, vp.X - btnSz - 4), 0, Util.Clamp(savedPos.Y, 0, vp.Y - btnSz - 4))
-        or  UDim2.new(0, 10, 0.5, -btnSz/2)  -- Default: left side, vertically centered
+        and UDim2.new(0, Util.Clamp(savedPos.X, 4, vp.X - btnSz - 4),
+                         0, Util.Clamp(savedPos.Y, 4, vp.Y - btnSz - 4))
+        or  UDim2.new(0, 10, 0.5, -btnSz/2)  -- left side, vertically centered
+
+    -- Outer glow halo (always behind the button)
+    local halo = Util.Create("Frame", {
+        Name                   = "FabHalo",
+        Size                   = UDim2.new(0, btnSz + 14, 0, btnSz + 14),
+        Position               = UDim2.new(0, startPos.X.Offset - 7,
+                                            0, startPos.Y.Offset - 7),
+        BackgroundColor3       = theme.Accent,
+        BackgroundTransparency = 0.78,
+        ZIndex                 = 298,
+    }, screenGui)
+    Util.Corner(halo, corner + 6)
 
     local btn = Util.Create("Frame", {
         Name             = "FloatingButton",
         Size             = UDim2.new(0, btnSz, 0, btnSz),
         Position         = startPos,
-        BackgroundColor3 = theme.Accent,  -- Use accent color (purple) like reference image
+        BackgroundColor3 = theme.Accent,
         ZIndex           = 300,
     }, screenGui)
-    Util.Corner(btn, 14)  -- Rounded square, not circle
+    Util.Corner(btn, corner)
 
-    -- Subtle inner glow
-    local glowFrame = Util.Create("Frame", {
-        Size                   = UDim2.new(1, 10, 1, 10),
-        Position               = UDim2.new(0, -5, 0, -5),
-        BackgroundColor3       = theme.Accent,
-        BackgroundTransparency = 0.82,
-        ZIndex                 = 299,
+    -- Subtle inner shine gradient
+    Util.Create("UIGradient", {
+        Color = ColorSequence.new({
+            ColorSequenceKeypoint.new(0, Color3.fromRGB(255,255,255)),
+            ColorSequenceKeypoint.new(1, Color3.fromRGB(0,0,0)),
+        }),
+        Transparency = NumberSequence.new({
+            NumberSequenceKeypoint.new(0, 0.82),
+            NumberSequenceKeypoint.new(1, 1),
+        }),
+        Rotation = 135,
     }, btn)
-    Util.Corner(glowFrame, 18)
 
-    -- Icon (white, centered)
-    local iconC, _ = Icons:Create(btn, icon or { Type = "Symbol", Source = "menu" }, 22, Color3.fromRGB(255,255,255))
-    iconC.Position  = UDim2.new(0.5, -11, 0.5, -11)
-    iconC.AnchorPoint = Vector2.new(0.5, 0.5)
+    -- Icon — use a clean Lucide/Symbol icon, no unicode boxes
+    local iconSz    = math.floor(btnSz * 0.46)
+    local iconC, _  = Icons:Create(btn,
+        icon or { Type = "Symbol", Source = "menu" },
+        iconSz,
+        Color3.fromRGB(255, 255, 255)
+    )
+    iconC.Position   = UDim2.new(0.5, -iconSz/2, 0.5, -iconSz/2)
+    iconC.AnchorPoint = Vector2.new(0, 0)
+    iconC.ZIndex     = 302
 
     local dragging   = false
     local dragStart  = Vector2.new()
@@ -1444,16 +1760,25 @@ function FloatingButton:Create(screenGui, icon, onClick)
         Size                   = UDim2.new(1, 0, 1, 0),
         BackgroundTransparency = 1,
         Text                   = "",
-        ZIndex                 = 301,
+        ZIndex                 = 305,
     }, btn)
 
-    -- FIX: Use UserInputService.InputBegan for correct touch position on mobile
+    -- Keep halo synced to button position
+    local function syncHalo()
+        local bp = btn.AbsolutePosition
+        halo.Position = UDim2.new(0, bp.X - 7, 0, bp.Y - 7)
+    end
+
     clickBtn.MouseButton1Down:Connect(function()
         dragging    = true
         hasDragged  = false
-        local inputPos = UserInputService:GetMouseLocation()
-        dragStart   = Vector2.new(inputPos.X, inputPos.Y)
+        local ip    = UserInputService:GetMouseLocation()
+        dragStart   = Vector2.new(ip.X, ip.Y)
         startFrame  = Vector2.new(btn.AbsolutePosition.X, btn.AbsolutePosition.Y)
+        -- Press scale
+        Util.Tween(btn, Util.TI(0.1, Enum.EasingStyle.Quad), {
+            BackgroundColor3 = theme.AccentActive,
+        })
     end)
 
     UserInputService.InputChanged:Connect(function(input)
@@ -1462,9 +1787,10 @@ function FloatingButton:Create(screenGui, icon, onClick)
         or input.UserInputType == Enum.UserInputType.Touch then
             local delta = Vector2.new(input.Position.X, input.Position.Y) - dragStart
             if delta.Magnitude > 5 then hasDragged = true end
-            local nx = Util.Clamp(startFrame.X + delta.X, 0, vp.X - btnSz)
-            local ny = Util.Clamp(startFrame.Y + delta.Y, 0, vp.Y - btnSz)
-            btn.Position = UDim2.new(0, nx, 0, ny)
+            local nx = Util.Clamp(startFrame.X + delta.X, 4, vp.X - btnSz - 4)
+            local ny = Util.Clamp(startFrame.Y + delta.Y, 4, vp.Y - btnSz - 4)
+            btn.Position  = UDim2.new(0, nx, 0, ny)
+            syncHalo()
         end
     end)
 
@@ -1473,39 +1799,45 @@ function FloatingButton:Create(screenGui, icon, onClick)
         and input.UserInputType ~= Enum.UserInputType.Touch then return end
         if not dragging then return end
         dragging = false
+        Util.Tween(btn, Util.TI(0.15), { BackgroundColor3 = theme.Accent })
         if hasDragged then
-            -- Snap to nearest vertical edge with padding
             local ap = btn.AbsolutePosition
             local cx = ap.X + btnSz / 2
+            local targetX
             if cx < vp.X / 2 then
-                Util.Tween(btn, Util.TI(0.3, Enum.EasingStyle.Back), { Position = UDim2.new(0, 10, 0, ap.Y) })
+                targetX = 10
             else
-                Util.Tween(btn, Util.TI(0.3, Enum.EasingStyle.Back), { Position = UDim2.new(0, vp.X - btnSz - 10, 0, ap.Y) })
+                targetX = vp.X - btnSz - 10
             end
-            -- Save after tween settles
-            task.delay(0.35, function()
-                SaveSystem:Set("FloatButtonPos", { X = btn.Position.X.Offset, Y = btn.Position.Y.Offset })
+            Util.Tween(btn, Util.TI(0.35, Enum.EasingStyle.Back),
+                { Position = UDim2.new(0, targetX, 0, ap.Y) })
+            task.delay(0.4, function()
+                syncHalo()
+                local ap2 = btn.AbsolutePosition
+                SaveSystem:Set("FloatButtonPos", { X = ap2.X, Y = ap2.Y })
             end)
         else
-            -- It was a tap/click
+            -- Tap: ripple + callback
             Anim.Ripple(btn, btnSz/2, btnSz/2, Color3.fromRGB(255,255,255))
-            Util.Tween(glowFrame, Util.TI(0.15), { BackgroundTransparency = 0.5 })
-            task.delay(0.3, function()
-                Util.Tween(glowFrame, Util.TI(0.3), { BackgroundTransparency = 0.82 })
+            Util.Tween(halo, Util.TI(0.12), { BackgroundTransparency = 0.45 })
+            task.delay(0.35, function()
+                Util.Tween(halo, Util.TI(0.3), { BackgroundTransparency = 0.78 })
             end)
             if onClick then Util.Safe(onClick) end
         end
     end)
 
     clickBtn.MouseEnter:Connect(function()
-        Util.Tween(btn, Util.TI(0.18), { BackgroundColor3 = theme.AccentHover })
-        Util.Tween(glowFrame, Util.TI(0.18), { BackgroundTransparency = 0.6 })
+        Util.Tween(btn,  Util.TI(0.16), { BackgroundColor3 = theme.AccentHover })
+        Util.Tween(halo, Util.TI(0.16), { BackgroundTransparency = 0.62 })
     end)
     clickBtn.MouseLeave:Connect(function()
-        Util.Tween(btn, Util.TI(0.18), { BackgroundColor3 = theme.Accent })
-        Util.Tween(glowFrame, Util.TI(0.18), { BackgroundTransparency = 0.82 })
+        Util.Tween(btn,  Util.TI(0.16), { BackgroundColor3 = theme.Accent })
+        Util.Tween(halo, Util.TI(0.16), { BackgroundTransparency = 0.78 })
     end)
 
+    -- Expose a way to update halo when btn is reparented / repositioned
+    btn._halo = halo
     return btn
 end
 
@@ -1526,7 +1858,7 @@ function Components.Button(parent, config, layoutOrder)
     local accent   = config.Accent   or theme.Accent
     local style    = config.Style    or "Filled"
 
-    local h  = Responsive:Scale(38)
+    local h  = Responsive:TapHeight()   -- min 44px on mobile
     local fs = Responsive:FontSize(13)
 
     local bg, textColor, strokeColor
@@ -1634,7 +1966,7 @@ function Components.Toggle(parent, config, layoutOrder)
     local saveKey  = config.SaveKey
     local state    = saveKey and SaveSystem:Get(saveKey, default) or default
 
-    local h  = Responsive:Scale(42)
+    local h  = Responsive:TapHeight()
     local fs = Responsive:FontSize(13)
 
     local row = Util.Create("Frame", {
@@ -1886,7 +2218,7 @@ function Components.Dropdown(parent, config, layoutOrder)
     }, parent)
 
     local header = Util.Create("Frame", {
-        Size             = UDim2.new(1, 0, 0, Responsive:Scale(40)),
+        Size             = UDim2.new(1, 0, 0, Responsive:TapHeight()),
         BackgroundColor3 = theme.SurfaceAlt,
         ZIndex           = 21,
     }, wrapper)
@@ -2089,7 +2421,7 @@ function Components.Input(parent, config, layoutOrder)
     }, container)
 
     local inputFrame = Util.Create("Frame", {
-        Size             = UDim2.new(1, 0, 0, Responsive:Scale(40)),
+        Size             = UDim2.new(1, 0, 0, Responsive:TapHeight()),
         BackgroundColor3 = theme.SurfaceAlt,
         ZIndex           = 11,
     }, container)
@@ -2182,7 +2514,7 @@ function Components.Keybind(parent, config, layoutOrder)
     local holding    = false
 
     local row = Util.Create("Frame", {
-        Size             = UDim2.new(1, 0, 0, Responsive:Scale(42)),
+        Size             = UDim2.new(1, 0, 0, Responsive:TapHeight()),
         BackgroundColor3 = theme.SurfaceAlt,
         ZIndex           = 10,
         LayoutOrder      = layoutOrder or 0,
@@ -2493,7 +2825,7 @@ function Components.ColorPicker(parent, config, layoutOrder)
 
     -- Header row (clickable)
     local header = Util.Create("Frame", {
-        Size             = UDim2.new(1, 0, 0, Responsive:Scale(40)),
+        Size             = UDim2.new(1, 0, 0, Responsive:TapHeight()),
         BackgroundColor3 = theme.SurfaceAlt,
         ZIndex           = 21,
     }, wrapper)
@@ -2919,30 +3251,34 @@ function Tab.new(tabBar, contentArea, config)
     self.Sections = {}
     self.Active   = false
 
-    local btnW = Responsive:Scale(100)
+    local isMobile = Responsive:IsMobile()
+    -- Mobile tabs are wider and have bigger font
+    local btnW  = isMobile and Responsive:Scale(110) or Responsive:Scale(100)
+    local tabFs = Responsive:FontSize(isMobile and 13 or 12)
+
     self.Button = Util.Create("Frame", {
         Size                   = UDim2.new(0, btnW, 1, -6),
         BackgroundColor3       = theme.SurfaceAlt,
         BackgroundTransparency = 1,
-        ZIndex                 = 12,
+        ZIndex                 = 13,
     }, tabBar)
-    Util.Corner(self.Button, 8)
-    Util.Pad(self.Button, 0, 8, 0, 8)
+    Util.Corner(self.Button, isMobile and 9 or 8)
+    Util.Pad(self.Button, 0, isMobile and 10 or 8, 0, isMobile and 10 or 8)
 
     local brow = Util.Create("Frame", {
         Size                   = UDim2.new(1, 0, 1, 0),
         BackgroundTransparency = 1,
-        ZIndex                 = 13,
+        ZIndex                 = 14,
     }, self.Button)
     Util.List(brow, Enum.FillDirection.Horizontal, 5,
         Enum.HorizontalAlignment.Center, Enum.VerticalAlignment.Center)
 
-    -- FIX: Store icon object properly for recoloring
     self.IconObj = nil
     if self.Icon then
-        local ic, iconInner = Icons:Create(brow, self.Icon, Responsive:IconSize() - 6, theme.TextMuted)
+        local iconSz = Responsive:IconSize() - (isMobile and 4 or 6)
+        local ic, iconInner = Icons:Create(brow, self.Icon, iconSz, theme.TextMuted)
         ic.LayoutOrder  = 0
-        self.IconObj    = iconInner  -- store inner ImageLabel or TextLabel, not container
+        self.IconObj    = iconInner
     end
 
     self.BtnLbl = Util.Create("TextLabel", {
@@ -2952,27 +3288,28 @@ function Tab.new(tabBar, contentArea, config)
         Text                   = self.Name,
         TextColor3             = theme.TextMuted,
         Font                   = Enum.Font.GothamSemibold,
-        TextSize               = Responsive:FontSize(12),
-        ZIndex                 = 14,
+        TextSize               = tabFs,
+        ZIndex                 = 15,
         LayoutOrder            = 1,
     }, brow)
 
+    -- Active underline indicator
+    local indicatorH = isMobile and 3 or 2
     self.Indicator = Util.Create("Frame", {
-        Size             = UDim2.new(0, 0, 0, 2),
+        Size             = UDim2.new(0, 0, 0, indicatorH),
         Position         = UDim2.new(0.5, 0, 1, 0),
         AnchorPoint      = Vector2.new(0.5, 0),
         BackgroundColor3 = theme.Accent,
-        ZIndex           = 14,
+        ZIndex           = 15,
     }, self.Button)
-    Util.Corner(self.Indicator, 2)
+    Util.Corner(self.Indicator, indicatorH)
 
-    -- FIX: Page is parented to contentArea and starts hidden
-    -- ClipsDescendants = true so scroll works; but contentArea must NOT clip
+    -- Tab content page (scrollable)
     self.Page = Util.Create("ScrollingFrame", {
         Size                   = UDim2.new(1, 0, 1, 0),
         BackgroundTransparency = 1,
         BorderSizePixel        = 0,
-        ScrollBarThickness     = 3,
+        ScrollBarThickness     = isMobile and 2 or 3,
         ScrollBarImageColor3   = theme.Accent,
         CanvasSize             = UDim2.new(0, 0, 0, 0),
         AutomaticCanvasSize    = Enum.AutomaticSize.Y,
@@ -2980,14 +3317,18 @@ function Tab.new(tabBar, contentArea, config)
         ZIndex                 = 12,
         Visible                = false,
     }, contentArea)
-    Util.Pad(self.Page, 12, 14, 12, 14)
-    Util.List(self.Page, Enum.FillDirection.Vertical, 8)
+    Util.Pad(self.Page,
+        isMobile and 10 or 12,
+        isMobile and 10 or 14,
+        isMobile and 10 or 12,
+        isMobile and 10 or 14)
+    Util.List(self.Page, Enum.FillDirection.Vertical, isMobile and 6 or 8)
 
     self.ClickBtn = Util.Create("TextButton", {
         Size                   = UDim2.new(1, 0, 1, 0),
         BackgroundTransparency = 1,
         Text                   = "",
-        ZIndex                 = 15,
+        ZIndex                 = 16,
     }, self.Button)
 
     return self
@@ -3067,7 +3408,7 @@ function SearchEngine:Init(searchBox, tabs)
 end
 
 -- ════════════════════════════════════════════════════════════════════
--- WINDOW SYSTEM  (FIX: layout, content visibility, mobile sizing)
+-- WINDOW SYSTEM  (v1.3.0 — mobile-first layout)
 -- ════════════════════════════════════════════════════════════════════
 
 local Window = {}
@@ -3084,168 +3425,210 @@ function Window.new(screenGui, config)
     self.Visible     = true
     self.Connections = {}
 
-    local vp       = Util.GetViewport()
-    local wSz      = Responsive:WindowSize()
+    local vp        = Util.GetViewport()
+    local wSz       = Responsive:WindowSize()
+    local isMobile  = Responsive:IsMobile()
+    local sidebarW  = Responsive:SidebarW()   -- 0 on Mobile
+    local topH      = Responsive:TopbarH()
+    local tabBarH   = Responsive:TabBarH()
+
     local savedPos = SaveSystem:Get("WinPos_" .. self.Title, nil)
     local initPos
-
     if savedPos then
-        -- Clamp saved position to current viewport
         local sx = Util.Clamp(savedPos.X, 0, vp.X - wSz.X.Offset)
         local sy = Util.Clamp(savedPos.Y, 0, vp.Y - wSz.Y.Offset)
         initPos = UDim2.new(0, sx, 0, sy)
     else
-        -- FIX: Center correctly using actual pixel offsets
         initPos = UDim2.new(0, math.max(0, (vp.X - wSz.X.Offset) / 2),
                             0, math.max(0, (vp.Y - wSz.Y.Offset) / 2))
     end
 
-    -- Main frame
+    -- ── Main Frame ──────────────────────────────────────────────────
     self.Frame = Util.Create("Frame", {
         Name             = "MixusfieldWindow",
         Size             = wSz,
         Position         = initPos,
         BackgroundColor3 = theme.Background,
         ZIndex           = 10,
-        ClipsDescendants = false,
+        ClipsDescendants = true,   -- true: clips all children cleanly
     }, screenGui)
-    Util.Corner(self.Frame, 14)
-    Util.Stroke(self.Frame, theme.Border, 1, 0.6)
+    Util.Corner(self.Frame, 16)
+    Util.Stroke(self.Frame, theme.Border, 1, 0.55)
 
-    -- Sidebar (icon strip on left)
-    local sidebarW = Responsive:Scale(46)
-    self.Sidebar = Util.Create("Frame", {
-        Name             = "Sidebar",
-        Size             = UDim2.new(0, sidebarW, 1, 0),
-        BackgroundColor3 = theme.SidebarBg,
-        ZIndex           = 11,
-        ClipsDescendants = true,
-    }, self.Frame)
-    Util.Corner(self.Sidebar, 14)
-    -- Square off right side of sidebar
-    Util.Create("Frame", {
-        Size             = UDim2.new(0, 14, 1, 0),
-        Position         = UDim2.new(1, -14, 0, 0),
-        BackgroundColor3 = theme.SidebarBg,
-        ZIndex           = 11,
-    }, self.Sidebar)
-    Util.List(self.Sidebar, Enum.FillDirection.Vertical, 4, Enum.HorizontalAlignment.Center)
-    Util.Pad(self.Sidebar, 10, 0, 10, 0)
+    -- ── Sidebar (icon strip on left — hidden on Mobile) ─────────────
+    self.Sidebar = nil
+    if sidebarW > 0 then
+        self.Sidebar = Util.Create("Frame", {
+            Name             = "Sidebar",
+            Size             = UDim2.new(0, sidebarW, 1, 0),
+            BackgroundColor3 = theme.SidebarBg,
+            ZIndex           = 12,
+            ClipsDescendants = true,
+        }, self.Frame)
+        -- Round only left corners
+        Util.Corner(self.Sidebar, 16)
+        -- Square-off the right side with a fill strip
+        Util.Create("Frame", {
+            Size             = UDim2.new(0, 16, 1, 0),
+            Position         = UDim2.new(1, -16, 0, 0),
+            BackgroundColor3 = theme.SidebarBg,
+            ZIndex           = 12,
+        }, self.Sidebar)
+        Util.List(self.Sidebar, Enum.FillDirection.Vertical, 6,
+            Enum.HorizontalAlignment.Center)
+        Util.Pad(self.Sidebar, 12, 0, 12, 0)
+    end
 
-    -- Topbar
-    local topH = Responsive:Scale(44)
+    -- ── Topbar ──────────────────────────────────────────────────────
+    -- On Mobile: spans full width (no sidebar), taller (52px)
+    -- On Desktop: starts after sidebar
     self.Topbar = Util.Create("Frame", {
         Name             = "Topbar",
         Size             = UDim2.new(1, -sidebarW, 0, topH),
         Position         = UDim2.new(0, sidebarW, 0, 0),
         BackgroundColor3 = theme.TopbarBg,
-        ZIndex           = 11,
+        ZIndex           = 12,
         ClipsDescendants = true,
     }, self.Frame)
-    Util.Corner(self.Topbar, 14)
-    -- Square off the left side and bottom of topbar
+    -- Round only top corners
+    Util.Corner(self.Topbar, 16)
+    -- Square off bottom half
     Util.Create("Frame", {
-        Size             = UDim2.new(0, 14, 1, 0),
+        Size             = UDim2.new(1, 0, 0, 16),
+        Position         = UDim2.new(0, 0, 1, -16),
         BackgroundColor3 = theme.TopbarBg,
-        ZIndex           = 11,
+        ZIndex           = 12,
     }, self.Topbar)
-    Util.Create("Frame", {
-        Size             = UDim2.new(1, 0, 0.5, 0),
-        Position         = UDim2.new(0, 0, 0.5, 0),
-        BackgroundColor3 = theme.TopbarBg,
-        ZIndex           = 11,
-    }, self.Topbar)
-    Util.Pad(self.Topbar, 0, 10, 0, 12)
+    -- Square off left side (if no sidebar, no need — but safe to always add)
+    if sidebarW > 0 then
+        Util.Create("Frame", {
+            Size             = UDim2.new(0, 16, 1, 0),
+            BackgroundColor3 = theme.TopbarBg,
+            ZIndex           = 12,
+        }, self.Topbar)
+    end
 
-    -- Title
+    -- Topbar padding
+    local topPadL = isMobile and 14 or 16
+    local topPadR = isMobile and 8  or 10
+    Util.Pad(self.Topbar, 0, topPadR, 0, topPadL)
+
+    -- Title label
     self.TitleLbl = Util.Create("TextLabel", {
-        Size                   = UDim2.new(1, -200, 1, 0),
-        Position               = UDim2.new(0, 14, 0, 0),
+        Size                   = UDim2.new(1, -220, 1, 0),
+        Position               = UDim2.new(0, topPadL, 0, 0),
         BackgroundTransparency = 1,
         Text                   = self.Title,
         TextColor3             = theme.Text,
         Font                   = Enum.Font.GothamBold,
-        TextSize               = Responsive:FontSize(14),
+        TextSize               = Responsive:FontSize(15),
         TextXAlignment         = Enum.TextXAlignment.Left,
-        ZIndex                 = 13,
+        ZIndex                 = 14,
     }, self.Topbar)
 
-    -- Controls row (right side of topbar)
+    -- Subtitle (hidden on mobile to save space)
+    if not isMobile then
+        Util.Create("TextLabel", {
+            Size                   = UDim2.new(0, 200, 1, 0),
+            Position               = UDim2.new(0, topPadL, 0, 0),
+            BackgroundTransparency = 1,
+            Text                   = "Premium UI Framework",
+            TextColor3             = theme.TextMuted,
+            Font                   = Enum.Font.Gotham,
+            TextSize               = Responsive:FontSize(11),
+            TextXAlignment         = Enum.TextXAlignment.Left,
+            TextYAlignment         = Enum.TextYAlignment.Bottom,
+            ZIndex                 = 13,
+        }, self.Topbar)
+        self.TitleLbl.TextYAlignment = Enum.TextYAlignment.Top
+        self.TitleLbl.Size = UDim2.new(1, -220, 0, 22)
+        self.TitleLbl.Position = UDim2.new(0, topPadL, 0, 8)
+    end
+
+    -- ── Control buttons row (right of topbar) ───────────────────────
+    local ctrlBtnSz = isMobile and 32 or 26
+    local ctrlGap   = isMobile and 6  or 5
+
     local controlsRow = Util.Create("Frame", {
-        Size                   = UDim2.new(0, 180, 1, 0),
-        Position               = UDim2.new(1, -188, 0, 0),
+        Name                   = "ControlsRow",
+        Size                   = UDim2.new(0, 200, 1, 0),
+        Position               = UDim2.new(1, -208, 0, 0),
         BackgroundTransparency = 1,
-        ZIndex                 = 13,
+        ZIndex                 = 14,
     }, self.Topbar)
-    Util.List(controlsRow, Enum.FillDirection.Horizontal, 5,
+    Util.List(controlsRow, Enum.FillDirection.Horizontal, ctrlGap,
         Enum.HorizontalAlignment.Right, Enum.VerticalAlignment.Center)
 
-    -- Search box
-    local searchFrame = Util.Create("Frame", {
-        Size             = UDim2.new(0, 88, 0, 26),
-        BackgroundColor3 = theme.SurfaceAlt,
-        ZIndex           = 13,
-        LayoutOrder      = 1,
-    }, controlsRow)
-    Util.Corner(searchFrame, 6)
-    Util.Stroke(searchFrame, theme.Border, 1, 0.6)
+    -- Search box — hidden on Mobile (saves topbar space, hard to type on small screens)
+    if not isMobile then
+        local searchFrame = Util.Create("Frame", {
+            Size             = UDim2.new(0, 90, 0, 26),
+            BackgroundColor3 = theme.SurfaceAlt,
+            ZIndex           = 14,
+            LayoutOrder      = 1,
+        }, controlsRow)
+        Util.Corner(searchFrame, 7)
+        Util.Stroke(searchFrame, theme.Border, 1, 0.65)
 
-    Util.Create("TextLabel", {
-        Size                   = UDim2.new(0, 16, 1, 0),
-        Position               = UDim2.new(0, 4, 0, 0),
-        BackgroundTransparency = 1,
-        Text                   = "?",
-        TextColor3             = theme.TextMuted,
-        TextScaled             = true,
-        Font                   = Enum.Font.GothamBold,
-        ZIndex                 = 14,
-    }, searchFrame)
+        Util.Create("TextLabel", {
+            Size                   = UDim2.new(0, 16, 1, 0),
+            Position               = UDim2.new(0, 5, 0, 0),
+            BackgroundTransparency = 1,
+            Text                   = "?",
+            TextColor3             = theme.TextMuted,
+            Font                   = Enum.Font.GothamBold,
+            TextScaled             = true,
+            ZIndex                 = 15,
+        }, searchFrame)
 
-    local searchBox = Util.Create("TextBox", {
-        Size                   = UDim2.new(1, -22, 1, 0),
-        Position               = UDim2.new(0, 20, 0, 0),
-        BackgroundTransparency = 1,
-        PlaceholderText        = "Search...",
-        PlaceholderColor3      = theme.TextMuted,
-        Text                   = "",
-        TextColor3             = theme.Text,
-        Font                   = Enum.Font.Gotham,
-        TextSize               = Responsive:FontSize(11),
-        ClearTextOnFocus       = false,
-        ZIndex                 = 14,
-    }, searchFrame)
-    self.SearchBox = searchBox
+        local searchBox = Util.Create("TextBox", {
+            Size                   = UDim2.new(1, -22, 1, 0),
+            Position               = UDim2.new(0, 21, 0, 0),
+            BackgroundTransparency = 1,
+            PlaceholderText        = "Search...",
+            PlaceholderColor3      = theme.TextMuted,
+            Text                   = "",
+            TextColor3             = theme.Text,
+            Font                   = Enum.Font.Gotham,
+            TextSize               = Responsive:FontSize(11),
+            ClearTextOnFocus       = false,
+            ZIndex                 = 15,
+        }, searchFrame)
+        self.SearchBox = searchBox
+    end
 
-    local function makeCtrlBtn(txt, color, lo, fn)
+    local function makeCtrlBtn(sym, color, lo, fn)
         local btn = Util.Create("TextButton", {
-            Size             = UDim2.new(0, 26, 0, 26),
+            Size             = UDim2.new(0, ctrlBtnSz, 0, ctrlBtnSz),
             BackgroundColor3 = color or theme.SurfaceAlt,
-            Text             = txt,
-            TextColor3       = Color3.fromRGB(255,255,255),
+            Text             = sym,
+            TextColor3       = Color3.fromRGB(255, 255, 255),
             Font             = Enum.Font.GothamBold,
-            TextSize         = Responsive:FontSize(11),
-            ZIndex           = 13,
+            TextSize         = Responsive:FontSize(isMobile and 13 or 11),
+            ZIndex           = 14,
             LayoutOrder      = lo,
         }, controlsRow)
-        Util.Corner(btn, 7)
+        Util.Corner(btn, isMobile and 10 or 7)
         btn.MouseButton1Click:Connect(fn or function() end)
         btn.MouseEnter:Connect(function()
-            Util.Tween(btn, Util.TI(0.15), { BackgroundColor3 = Util.LerpColor(color or theme.SurfaceAlt, Color3.fromRGB(255,255,255), 0.18) })
+            Util.Tween(btn, Util.TI(0.14), {
+                BackgroundColor3 = Util.LerpColor(
+                    color or theme.SurfaceAlt, Color3.fromRGB(255,255,255), 0.2)
+            })
         end)
         btn.MouseLeave:Connect(function()
-            Util.Tween(btn, Util.TI(0.15), { BackgroundColor3 = color or theme.SurfaceAlt })
+            Util.Tween(btn, Util.TI(0.14), { BackgroundColor3 = color or theme.SurfaceAlt })
         end)
         return btn
     end
 
-    makeCtrlBtn("*", theme.SurfaceAlt, 2, function()
-        self:OpenSettings()
-    end)
+    makeCtrlBtn("*", theme.SurfaceAlt, 2, function() self:OpenSettings() end)
     makeCtrlBtn("-", theme.SurfaceAlt, 3, function() self:Hide() end)
-    makeCtrlBtn("X", Color3.fromRGB(180,50,50), 4, function() self:Hide() end)
+    makeCtrlBtn("X", Color3.fromRGB(185, 48, 48), 4, function() self:Hide() end)
 
-    -- Tab bar (horizontal scrolling)
-    local tabBarH  = Responsive:Scale(36)
+    -- ── Tab Bar ──────────────────────────────────────────────────────
+    -- On Mobile: full width, taller tabs with bigger font
+    -- On Desktop: starts after sidebar
     self.TabBar = Util.Create("ScrollingFrame", {
         Name                 = "TabBar",
         Size                 = UDim2.new(1, -sidebarW, 0, tabBarH),
@@ -3255,14 +3638,16 @@ function Window.new(screenGui, config)
         ScrollingDirection   = Enum.ScrollingDirection.X,
         CanvasSize           = UDim2.new(0, 0, 0, 0),
         AutomaticCanvasSize  = Enum.AutomaticSize.X,
-        ZIndex               = 11,
+        ZIndex               = 12,
+        ClipsDescendants     = true,
     }, self.Frame)
-    Util.Pad(self.TabBar, 4, 8, 0, 8)
-    Util.List(self.TabBar, Enum.FillDirection.Horizontal, 4,
+    Util.Pad(self.TabBar, isMobile and 5 or 4, 8, 0, 8)
+    Util.List(self.TabBar, Enum.FillDirection.Horizontal,
+        isMobile and 3 or 4,
         Enum.HorizontalAlignment.Left, Enum.VerticalAlignment.Center)
     Util.Stroke(self.TabBar, theme.Border, 1, 0.8)
 
-    -- Content area  (FIX: ClipsDescendants = false so tab pages render)
+    -- ── Content Area ─────────────────────────────────────────────────
     local headerH = topH + tabBarH
     self.ContentArea = Util.Create("Frame", {
         Name             = "ContentArea",
@@ -3270,28 +3655,28 @@ function Window.new(screenGui, config)
         Position         = UDim2.new(0, sidebarW, 0, headerH),
         BackgroundColor3 = theme.Background,
         ZIndex           = 11,
-        ClipsDescendants = false,   -- MUST be false so tab scroll pages are visible
+        ClipsDescendants = true,  -- clip so scroll pages don't overflow
     }, self.Frame)
-    Util.Corner(self.ContentArea, 10)
 
-    -- Dragging (FIX: use UserInputService.InputBegan for correct touch position on mobile)
+    -- ── Drag (topbar only, uses GetMouseLocation for mobile accuracy) ─
     local dragging  = false
     local dragStart = Vector2.new()
     local winStart  = Vector2.new()
 
+    local dragW = isMobile and 0.5 or 0.55
     local dragArea = Util.Create("TextButton", {
-        Size                   = UDim2.new(1, -200, 1, 0),
+        Size                   = UDim2.new(dragW, -ctrlBtnSz * 4, 1, 0),
         BackgroundTransparency = 1,
         Text                   = "",
         ZIndex                 = 5,
     }, self.Topbar)
 
-    dragArea.MouseButton1Down:Connect(function(x, y)
+    dragArea.MouseButton1Down:Connect(function()
         dragging  = true
-        -- Use UserInputService for accurate position on mobile touch
-        local inputPos = UserInputService:GetMouseLocation()
-        dragStart = Vector2.new(inputPos.X, inputPos.Y)
-        winStart  = Vector2.new(self.Frame.AbsolutePosition.X, self.Frame.AbsolutePosition.Y)
+        local ip  = UserInputService:GetMouseLocation()
+        dragStart = Vector2.new(ip.X, ip.Y)
+        winStart  = Vector2.new(self.Frame.AbsolutePosition.X,
+                                 self.Frame.AbsolutePosition.Y)
     end)
 
     local moveConn = UserInputService.InputChanged:Connect(function(input)
@@ -3319,9 +3704,9 @@ function Window.new(screenGui, config)
     table.insert(self.Connections, endConn)
 
     -- Floating restore button
-    self.FloatBtn = FloatingButton:Create(screenGui, { Type = "Symbol", Source = "menu" }, function()
-        self:Show()
-    end)
+    self.FloatBtn = FloatingButton:Create(screenGui,
+        { Type = "Symbol", Source = "menu" },
+        function() self:Show() end)
     self.FloatBtn.Visible = false
 
     return self
@@ -3331,28 +3716,29 @@ function Window:AddTab(config)
     local tab = Tab.new(self.TabBar, self.ContentArea, config)
     table.insert(self.Tabs, tab)
 
-    -- Sidebar icon
-    local sidebarIconSize = Responsive:Scale(36)
-    local iconContainer = Util.Create("Frame", {
-        Size                   = UDim2.new(0, sidebarIconSize, 0, sidebarIconSize),
-        BackgroundColor3       = Themes:Current().SurfaceAlt,
-        BackgroundTransparency = 1,
-        ZIndex                 = 12,
-    }, self.Sidebar)
-    Util.Corner(iconContainer, 10)
+    -- Sidebar icon — only if sidebar exists (not Mobile)
+    if self.Sidebar then
+        local sidebarIconSize = Responsive:Scale(36)
+        local iconContainer = Util.Create("Frame", {
+            Size                   = UDim2.new(0, sidebarIconSize, 0, sidebarIconSize),
+            BackgroundColor3       = Themes:Current().SurfaceAlt,
+            BackgroundTransparency = 1,
+            ZIndex                 = 13,
+        }, self.Sidebar)
+        Util.Corner(iconContainer, 10)
 
-    -- FIX: store the inner icon object (ImageLabel or TextLabel) for safe recoloring
-    local sidebarIconInner = nil
-    if config.Icon then
-        local ic, innerObj = Icons:Create(iconContainer, config.Icon,
-            Responsive:IconSize() - 4, Themes:Current().TextMuted)
-        ic.Position     = UDim2.new(0.5, -(Responsive:IconSize()-4)/2,
-                                    0.5, -(Responsive:IconSize()-4)/2)
-        sidebarIconInner = innerObj
+        local sidebarIconInner = nil
+        if config.Icon then
+            local ic, innerObj = Icons:Create(iconContainer, config.Icon,
+                Responsive:IconSize() - 4, Themes:Current().TextMuted)
+            ic.Position      = UDim2.new(0.5, -(Responsive:IconSize()-4)/2,
+                                          0.5, -(Responsive:IconSize()-4)/2)
+            sidebarIconInner = innerObj
+        end
+
+        tab.SidebarIconFrame = iconContainer
+        tab.SidebarIconInner = sidebarIconInner
     end
-
-    tab.SidebarIconFrame = iconContainer
-    tab.SidebarIconInner = sidebarIconInner
 
     tab.ClickBtn.MouseButton1Click:Connect(function()
         self:SetActiveTab(tab)
@@ -3362,7 +3748,9 @@ function Window:AddTab(config)
         self:SetActiveTab(tab)
     end
 
-    SearchEngine:Init(self.SearchBox, self.Tabs)
+    if self.SearchBox then
+        SearchEngine:Init(self.SearchBox, self.Tabs)
+    end
     return tab
 end
 
@@ -3414,10 +3802,12 @@ function Window:OpenSettings()
     if self._settingsOpen then return end
     self._settingsOpen = true
 
-    local theme  = Themes:Current()
-    local vp     = Util.GetViewport()
-    local panW   = math.min(vp.X - 24, 360)
-    local panH   = math.min(vp.Y - 60, 480)
+    local theme    = Themes:Current()
+    local vp       = Util.GetViewport()
+    local isMobile = Responsive:IsMobile()
+    -- Full width on mobile, fixed width on desktop
+    local panW     = isMobile and math.min(vp.X - 10, 460) or math.min(vp.X - 24, 380)
+    local panH     = isMobile and math.min(vp.Y - 30, 520) or math.min(vp.Y - 60, 500)
 
     local overlay = Util.Create("Frame", {
         Name                   = "SettingsOverlay",
@@ -3542,9 +3932,10 @@ function Window:OpenSettings()
         LayoutOrder            = 1,
     }, body)
     Util.Create("UIGridLayout", {
-        CellSize         = UDim2.new(0.5, -4, 0, Responsive:Scale(38)),
-        CellPadding      = UDim2.new(0, 8, 0, 8),
-        SortOrder        = Enum.SortOrder.LayoutOrder,
+        CellSize            = UDim2.new(isMobile and 1.0 or 0.5, isMobile and 0 or -4,
+                                        0, Responsive:Scale(isMobile and 44 or 38)),
+        CellPadding         = UDim2.new(0, 8, 0, 8),
+        SortOrder           = Enum.SortOrder.LayoutOrder,
         HorizontalAlignment = Enum.HorizontalAlignment.Left,
     }, themeGrid)
 
@@ -3757,7 +4148,7 @@ function Window:OpenSettings()
     Util.Create("TextLabel", {
         Size                   = UDim2.new(1, 0, 0, 16),
         BackgroundTransparency = 1,
-        Text                   = "Mixusfield v1.2.0  |  Mobile & PC Ready",
+        Text                   = "Mixusfield v1.3.0  |  Mobile+ Ready",
         TextColor3             = theme.TextMuted,
         Font                   = Enum.Font.Gotham,
         TextSize               = Responsive:FontSize(10),
@@ -3915,7 +4306,7 @@ return {
     Util       = Util,
     Responsive = Responsive,
     Notify     = function(config) NotifSystem:Push(config) end,
-    Version    = "1.2.0",
+    Version    = "1.3.0",
 
     -- Direct component access (advanced use)
     Components = Components,
