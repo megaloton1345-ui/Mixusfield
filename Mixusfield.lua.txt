@@ -2,10 +2,18 @@
     ╔══════════════════════════════════════════════════════════════════╗
     ║                    M I X U S F I E L D                          ║
     ║           Next-Generation Premium Roblox UI Framework           ║
-    ║                     Version 1.1.0 (Fixed)                       ║
+    ║                     Version 1.2.0 (Fixed)                       ║
     ╚══════════════════════════════════════════════════════════════════╝
 
-    FIXES IN 1.1.0:
+    FIXES IN 1.2.0:
+    - Mobile window is now compact (not full-screen) — matches Mixusfield style
+    - FloatingButton is now accent-colored rounded square (not grey circle)
+    - FloatingButton defaults to left side, vertically centered
+    - FloatingButton dragging fixed: uses UserInputService:GetMouseLocation()
+      so touch drag position is correct on mobile (no offset jump)
+    - Window topbar dragging also fixed with GetMouseLocation() for mobile
+    - FloatButton position save now waits for snap tween to finish
+    - Snap-to-edge padding improved (10px gap from screen edge)
     - Window size now correctly adapts to Mobile / Tablet / Desktop / Ultrawide
     - Tab content pages now display correctly after selecting a tab
     - Main window now properly appears AFTER key system is dismissed/passed
@@ -217,10 +225,10 @@ function Responsive:IconSize() return self:Get().iconSize end
 function Responsive:WindowSize()
     local vp     = Util.GetViewport()
     local device = Util.GetDeviceType()
-    -- Mobile: almost full screen, portrait-aware
+    -- Mobile: compact window like Mixusfield reference (not full screen)
     if device == "Mobile" then
-        local w = math.min(vp.X - 16, 420)
-        local h = math.min(vp.Y - 60, 520)
+        local w = math.min(vp.X - 40, 680)
+        local h = math.min(vp.Y - 120, 420)
         return UDim2.new(0, w, 0, h)
     elseif device == "Tablet" then
         return UDim2.new(0, 560, 0, 400)
@@ -1397,31 +1405,33 @@ local FloatingButton = {}
 function FloatingButton:Create(screenGui, icon, onClick)
     local theme    = Themes:Current()
     local vp       = Util.GetViewport()
+    local btnSz    = 52  -- button size in pixels
     local savedPos = SaveSystem:Get("FloatButtonPos", nil)
     local startPos = savedPos
-        and UDim2.new(0, Util.Clamp(savedPos.X, 0, vp.X - 56), 0, Util.Clamp(savedPos.Y, 0, vp.Y - 56))
-        or  UDim2.new(1, -66, 1, -72)
+        and UDim2.new(0, Util.Clamp(savedPos.X, 0, vp.X - btnSz - 4), 0, Util.Clamp(savedPos.Y, 0, vp.Y - btnSz - 4))
+        or  UDim2.new(0, 10, 0.5, -btnSz/2)  -- Default: left side, vertically centered
 
     local btn = Util.Create("Frame", {
         Name             = "FloatingButton",
-        Size             = UDim2.new(0, 52, 0, 52),
+        Size             = UDim2.new(0, btnSz, 0, btnSz),
         Position         = startPos,
-        BackgroundColor3 = theme.Surface,
+        BackgroundColor3 = theme.Accent,  -- Use accent color (purple) like reference image
         ZIndex           = 300,
     }, screenGui)
-    Util.Corner(btn, 999)
-    Util.Stroke(btn, theme.Accent, 1.5, 0.4)
+    Util.Corner(btn, 14)  -- Rounded square, not circle
 
+    -- Subtle inner glow
     local glowFrame = Util.Create("Frame", {
-        Size                   = UDim2.new(1, 14, 1, 14),
-        Position               = UDim2.new(0, -7, 0, -7),
+        Size                   = UDim2.new(1, 10, 1, 10),
+        Position               = UDim2.new(0, -5, 0, -5),
         BackgroundColor3       = theme.Accent,
-        BackgroundTransparency = 0.75,
+        BackgroundTransparency = 0.82,
         ZIndex                 = 299,
     }, btn)
-    Util.Corner(glowFrame, 999)
+    Util.Corner(glowFrame, 18)
 
-    local iconC, _ = Icons:Create(btn, icon or { Type = "Symbol", Source = "menu" }, 22, theme.Accent)
+    -- Icon (white, centered)
+    local iconC, _ = Icons:Create(btn, icon or { Type = "Symbol", Source = "menu" }, 22, Color3.fromRGB(255,255,255))
     iconC.Position  = UDim2.new(0.5, -11, 0.5, -11)
     iconC.AnchorPoint = Vector2.new(0.5, 0.5)
 
@@ -1437,10 +1447,12 @@ function FloatingButton:Create(screenGui, icon, onClick)
         ZIndex                 = 301,
     }, btn)
 
-    clickBtn.MouseButton1Down:Connect(function(x, y)
+    -- FIX: Use UserInputService.InputBegan for correct touch position on mobile
+    clickBtn.MouseButton1Down:Connect(function()
         dragging    = true
         hasDragged  = false
-        dragStart   = Vector2.new(x, y)
+        local inputPos = UserInputService:GetMouseLocation()
+        dragStart   = Vector2.new(inputPos.X, inputPos.Y)
         startFrame  = Vector2.new(btn.AbsolutePosition.X, btn.AbsolutePosition.Y)
     end)
 
@@ -1449,9 +1461,9 @@ function FloatingButton:Create(screenGui, icon, onClick)
         if input.UserInputType == Enum.UserInputType.MouseMovement
         or input.UserInputType == Enum.UserInputType.Touch then
             local delta = Vector2.new(input.Position.X, input.Position.Y) - dragStart
-            if delta.Magnitude > 4 then hasDragged = true end
-            local nx = Util.Clamp(startFrame.X + delta.X, 0, vp.X - 52)
-            local ny = Util.Clamp(startFrame.Y + delta.Y, 0, vp.Y - 52)
+            if delta.Magnitude > 5 then hasDragged = true end
+            local nx = Util.Clamp(startFrame.X + delta.X, 0, vp.X - btnSz)
+            local ny = Util.Clamp(startFrame.Y + delta.Y, 0, vp.Y - btnSz)
             btn.Position = UDim2.new(0, nx, 0, ny)
         end
     end)
@@ -1462,33 +1474,36 @@ function FloatingButton:Create(screenGui, icon, onClick)
         if not dragging then return end
         dragging = false
         if hasDragged then
-            -- Snap to nearest vertical edge
+            -- Snap to nearest vertical edge with padding
             local ap = btn.AbsolutePosition
-            local cx = ap.X + 26
+            local cx = ap.X + btnSz / 2
             if cx < vp.X / 2 then
                 Util.Tween(btn, Util.TI(0.3, Enum.EasingStyle.Back), { Position = UDim2.new(0, 10, 0, ap.Y) })
             else
-                Util.Tween(btn, Util.TI(0.3, Enum.EasingStyle.Back), { Position = UDim2.new(0, vp.X - 62, 0, ap.Y) })
+                Util.Tween(btn, Util.TI(0.3, Enum.EasingStyle.Back), { Position = UDim2.new(0, vp.X - btnSz - 10, 0, ap.Y) })
             end
-            SaveSystem:Set("FloatButtonPos", { X = btn.Position.X.Offset, Y = btn.Position.Y.Offset })
+            -- Save after tween settles
+            task.delay(0.35, function()
+                SaveSystem:Set("FloatButtonPos", { X = btn.Position.X.Offset, Y = btn.Position.Y.Offset })
+            end)
         else
-            -- It was a click
-            Anim.Ripple(btn, 26, 26, theme.Accent)
-            Util.Tween(glowFrame, Util.TI(0.15), { BackgroundTransparency = 0.4 })
+            -- It was a tap/click
+            Anim.Ripple(btn, btnSz/2, btnSz/2, Color3.fromRGB(255,255,255))
+            Util.Tween(glowFrame, Util.TI(0.15), { BackgroundTransparency = 0.5 })
             task.delay(0.3, function()
-                Util.Tween(glowFrame, Util.TI(0.3), { BackgroundTransparency = 0.75 })
+                Util.Tween(glowFrame, Util.TI(0.3), { BackgroundTransparency = 0.82 })
             end)
             if onClick then Util.Safe(onClick) end
         end
     end)
 
     clickBtn.MouseEnter:Connect(function()
-        Util.Tween(btn, Util.TI(0.2), { BackgroundColor3 = theme.SurfaceAlt })
-        Util.Tween(glowFrame, Util.TI(0.2), { BackgroundTransparency = 0.55 })
+        Util.Tween(btn, Util.TI(0.18), { BackgroundColor3 = theme.AccentHover })
+        Util.Tween(glowFrame, Util.TI(0.18), { BackgroundTransparency = 0.6 })
     end)
     clickBtn.MouseLeave:Connect(function()
-        Util.Tween(btn, Util.TI(0.2), { BackgroundColor3 = theme.Surface })
-        Util.Tween(glowFrame, Util.TI(0.2), { BackgroundTransparency = 0.75 })
+        Util.Tween(btn, Util.TI(0.18), { BackgroundColor3 = theme.Accent })
+        Util.Tween(glowFrame, Util.TI(0.18), { BackgroundTransparency = 0.82 })
     end)
 
     return btn
@@ -3259,7 +3274,7 @@ function Window.new(screenGui, config)
     }, self.Frame)
     Util.Corner(self.ContentArea, 10)
 
-    -- Dragging
+    -- Dragging (FIX: use UserInputService.InputBegan for correct touch position on mobile)
     local dragging  = false
     local dragStart = Vector2.new()
     local winStart  = Vector2.new()
@@ -3273,7 +3288,9 @@ function Window.new(screenGui, config)
 
     dragArea.MouseButton1Down:Connect(function(x, y)
         dragging  = true
-        dragStart = Vector2.new(x, y)
+        -- Use UserInputService for accurate position on mobile touch
+        local inputPos = UserInputService:GetMouseLocation()
+        dragStart = Vector2.new(inputPos.X, inputPos.Y)
         winStart  = Vector2.new(self.Frame.AbsolutePosition.X, self.Frame.AbsolutePosition.Y)
     end)
 
@@ -3740,7 +3757,7 @@ function Window:OpenSettings()
     Util.Create("TextLabel", {
         Size                   = UDim2.new(1, 0, 0, 16),
         BackgroundTransparency = 1,
-        Text                   = "Mixusfield v1.1.0  |  Mobile & PC Ready",
+        Text                   = "Mixusfield v1.2.0  |  Mobile & PC Ready",
         TextColor3             = theme.TextMuted,
         Font                   = Enum.Font.Gotham,
         TextSize               = Responsive:FontSize(10),
@@ -3898,7 +3915,7 @@ return {
     Util       = Util,
     Responsive = Responsive,
     Notify     = function(config) NotifSystem:Push(config) end,
-    Version    = "1.1.0",
+    Version    = "1.2.0",
 
     -- Direct component access (advanced use)
     Components = Components,
